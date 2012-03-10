@@ -34,6 +34,7 @@
 #include "llvm/Support/MemoryObject.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 using namespace llvm;
 
 EDDisassembler::DisassemblerMap_t EDDisassembler::sDisassemblers;
@@ -126,8 +127,13 @@ EDDisassembler::EDDisassembler(CPUKey &key) :
   HasSemantics(false), 
   ErrorStream(nulls()), 
   Key(key),
-  TgtTriple(key.Triple.c_str()) {        
-  
+  TgtTriple(key.Triple.c_str()) {
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllDisassemblers();
+
   LLVMSyntaxVariant = getLLVMSyntaxVariant(TgtTriple.getArch(), key.Syntax);
   
   if (LLVMSyntaxVariant < 0)
