@@ -100,6 +100,10 @@ class TypeKind(object):
         TypeKind._value_map[value] = kind
         setattr(TypeKind, name, kind)
 
+class Attribute(object):
+    def from_param(self):
+        raise Exception('TODO implement.')
+
 class Context(LLVMObject):
     """LLVM state manager.
 
@@ -243,6 +247,85 @@ class Module(LLVMObject):
 
         return Type(ptr, module=self, context=self._get_ref('context'))
 
+    def add_global(self, ty, name, address_space=None):
+        """Add a global Type to the Module with the specified name.
+
+        Returns a Value.
+        """
+        assert isinstance(ty, Type)
+        assert isinstance(name, str)
+
+        ptr = None
+        if address_space:
+            ptr = lib.LLVMAddGlobalInAddressSpace(self, ty, name, address_space)
+        else:
+            ptr = lib.LLVMAddGlobal(self, ty, name)
+
+        return Value(ptr, module=self)
+
+    def get_global(self, name):
+        """Get a global Value by name."""
+
+        ptr = lib.LLVMGetNamedGlobal(self, name)
+        return Value(ptr, module=self)
+
+    def get_globals(self):
+        """Get all globals in this module.
+
+        This is a generator of Value instances.
+        """
+
+        ptr = lib.LLVMGetFirstGlobal(self)
+        g = None
+        while ptr:
+            g = Value(ptr, module=self)
+            yield g
+
+            ptr = lib.LLVMGetNextGlobal(g)
+
+    def delete_global(self, value):
+        """Delete a global Value from this Module."""
+        lib.LLVMDeleteGlobal(value)
+
+    def add_alias(self, ty, alias, name):
+        raise Exception('TODO implement.')
+
+    def add_function(self, func, name):
+        """Add a function to this Module under a specified name."""
+
+        assert isinstance(func, FunctionType)
+        assert isinstance(name, str)
+
+        ptr = lib.LLVMAddFunction(self, name, func)
+        return Value(ptr, module=self)
+
+    def get_function(self, name):
+        """Get a function by its str name."""
+
+        assert isinstance(name, str)
+
+        ptr = lib.LLVMGetNamedFunction(self, name)
+        return Value(ptr, module=self)
+
+    def get_functions(self):
+        """Obtain all functions in this Module.
+
+        This is a generator for Value instances.
+        """
+        ptr = lib.LLVMGetFirstFunction(self)
+        f = None
+        while ptr:
+            f = Value(ptr, module=self)
+            yield f
+
+            ptr = lib.LLVMGetNextFunction(f)
+
+    def delete_function(self, value):
+        """Delete a function Value from this Module."""
+        assert isinstance(value, Value)
+
+        lib.LLVMDeletionFunction(value)
+
 class TypeFactory(LLVMObject):
     """A factory for Type instances.
 
@@ -365,21 +448,29 @@ class Type(LLVMObject):
         return lib.LLVMTypeIsSized(self)
 
     @CachedProperty
-    def int_width(self):
-        """For integer types, the width of the integer, in bits."""
-        return lib.LLVMGetIntTypeWidth(self)
-
-    @CachedProperty
     def context(self):
         """The Context to which this Type is attached."""
         return self._get_ref('context')
 
+class IntegerType(Type):
+    """Represents an integer Type."""
+
     @CachedProperty
-    def is_vararg(self):
+    def width(self):
+        """The width of the integer, in bits."""
+        return lib.LLVMGetIntTypeWidth(self)
+
+class FunctionType(Type):
+    """Represents a function Type."""
+
+    @CachedProperty
+    def is_variadic(self):
+        """Boolean indicating whether the function is variadic."""
         return lib.LLVMIsFunctionVarArg(self)
 
     @CachedProperty
     def return_type(self):
+        """The Type of the value returned by this function."""
         ptr = lib.LLVMGetReturnType(self)
 
         return Type(ptr, context=self._get_ref('context'))
@@ -397,15 +488,24 @@ class Type(LLVMObject):
         for ptr in arr:
             yield Type(ptr, context=self._get_ref('context'))
 
+class StructType(Type):
+    """Represents a structure Type."""
+
     @CachedProperty
-    def struct_name(self):
+    def name(self):
+        """The str name of this structure."""
         return lib.LLVMGetStructName(self).value
 
-    def set_struct_body(self, elements, packed=False):
+    def set_elements(self, elements, packed=False):
+        """Set the structure contents to a list of Types.
+
+        elements is a list of Type instances that compose the structure.
+        packed indicates whether this is a packed structure.
+        """
         raise Exception('TODO Implement')
 
-    def get_struct_elements(self):
-        """The Types in a struct type.
+    def get_elements(self):
+        """The Types in this structure.
 
         This is a generator for Type instances.
         """
@@ -416,20 +516,26 @@ class Type(LLVMObject):
         for ptr in arr:
             yield Type(ptr, context=self._get_ref('context'))
 
-    @CachedProperty
-    def is_packed_struct(self):
+    @property
+    def is_packed(self):
         return lib.LLVMIsPackedStruct(self)
 
     @CachedProperty
-    def is_opaque_struct(self):
+    def is_opaque(self):
         return lib.LLVMIsOpaqueStruct(self)
 
+class ArrayType(Type):
+    """Represents an array Type."""
+
     @CachedProperty
-    def array_type(self):
+    def element_type(self):
         count = lib.LLVMGetArrayLength(self)
         ptr = lib.LLVMGetArrayType(self, count)
 
         return Type(ptr, context=self._get_ref('context'))
+
+class PointerType(Type):
+    """Represents a pointer Type."""
 
     @CachedProperty
     def pointer_type(self):
@@ -438,19 +544,26 @@ class Type(LLVMObject):
 
         return Type(ptr, context=self._get_ref('context'))
 
+class VectorType(Type):
+    """Represents a vector Type."""
+
     @CachedProperty
-    def vector_type(self):
+    def element_type(self):
         size = lib.LLVMGetVectorSize(self)
         ptr = lib.LLVMVectorType(self, size)
 
         return Type(ptr, context=self._get_ref('context'))
 
-
 class Value(LLVMObject):
-    def __init__(self, ptr, context):
+    def __init__(self, ptr, context=None, module=None):
         LLVMObject.__init__(self, ptr)
 
-        self._set_ref('context', context)
+        if module:
+            self._set_ref('module', module)
+            self._set_ref('context', module._get_ref('context'))
+
+        if context:
+            self._set_ref('context', context)
 
     @CachedProperty
     def type(self):
@@ -466,12 +579,162 @@ class Value(LLVMObject):
     def name(self, value):
         lib.LLVMSetValueName(self, value)
 
+class ConstantValue(Value):
+    pass
+
+class GlobalValue(Value):
+    """Represents a global Value."""
+
+    @CachedProperty
+    def parent(self):
+        """The parent Module of this GlobalValue."""
+        return self._get_ref('module')
+
+    @CachedProperty
+    def is_declaration(self):
+        """Boolean indicating whether this is a declaration."""
+        return lib.LLVMIsDeclaration(self)
+
+    @property
+    def linkage(self):
+        """The LinkageType of this value."""
+        raise Exception('TODO implement.')
+
+    @linkage.setter
+    def linkage(self, value):
+        raise Exception('TODO implement.')
+
+    @property
+    def section(self):
+        raise Exception('TODO implement.')
+
+    @section.setter
+    def section(self, value):
+        raise Exception('TODO implement.')
+
+    @property
+    def visibility(self):
+        raise Exception('TODO implement.')
+
+    @visibility.setter
+    def visibility(self, value):
+        raise Exception('TODO implement.')
+
+    @property
+    def alignment(self):
+        raise Exception('TODO implement.')
+
+    @alignment.setter
+    def alignment(self, value):
+        raise Exception('TODO implement.')
+
+    @property
+    def initializer(self):
+        raise Exception('TODO implement.')
+
+    @initializer.setter
+    def initializer(self, value):
+        raise Exception('TODO implement.')
+
+    @property
+    def is_thread_local(self):
+        raise Exception('TODO implement.')
+
+    @is_thread_local.setter
+    def is_thread_local(self, value):
+        raise Exception('TODO implement.')
+
+    @property
+    def is_global_constant(self):
+        raise Exception('TODO implement.')
+
+    @is_global_constant.setter
+    def is_global_constant(self, value):
+        raise Exception('TODO implement.')
+
+    def delete(self):
+        """Delete this global value from its containing module."""
+        self._get_ref('module').delete_global(self)
+
+class FunctionValue(Value):
+    @property
+    def id(self):
+        raise Exception('TODO implement.')
+
+    def _get_calling_convention(self):
+        raise Exception('TODO implement.')
+
+    def _set_calling_convention(self, value):
+        raise Exception('TODO implement.')
+
+    calling_convention = property(_get_calling_convention,
+            _set_calling_convention)
+
+    def _get_gc(self):
+        raise Exception('TODO implement.')
+
+    def _set_gc(self, value):
+        raise Exception('TODO implement.')
+
+    gc = property(_get_gc, _set_gc)
+
+    def delete(self):
+        """Delete this function from its containing Module."""
+        raise Exception('TODO implement.')
+
+    @property
+    def attribute(self):
+        raise Exception('TODO implement.')
+
+    def add_attribute(self, attribute):
+        raise Exception('TODO implement.')
+
+    def remove_attribute(self, attribute):
+        raise Exception('TODO implement.')
+
+    def get_parameters(self):
+        ptr = lib.LLVMGetFirstParam(self)
+        value = None
+        while ptr:
+            value = ArgumentValue(ptr, module=self._get_ref('module'))
+
+            yield value
+
+            ptr = lib.LLVMGetNextParam(value)
+
+class ArgumentValue(Value):
+    def add_attribute(self, attribute):
+        raise Exception('TODO implement.')
+
+    def remove_attribute(self, attribute):
+        raise Exception('TODO implement.')
+
+    def get_attribute(self, value):
+        raise Exception('TODO implement.')
+
 def register_library(library):
     """Register C APIs with ctypes library instance.
 
     This list is pretty long. We define APIs in alphabetical order for
     sanity.
     """
+
+    library.LLVMAddAlias.argtypes = [Module, Type, Value, c_char_p]
+    library.LLVMAddAlias.restype = c_object_p
+
+    library.LLVMAddAttribute.argtypes = [ArgumentValue, Attribute]
+
+    library.LLVMAddFunctionAttr.argtypes = [FunctionValue, Attribute]
+
+    library.LLVMAddFunction.argtypes = [Module, c_char_p, FunctionType]
+    library.LLVMAddFunction.restype = c_object_p
+
+    library.LLVMAddGlobalInAddressSpace.argtypes = [Module, Type, c_char_p,
+            c_uint]
+    library.LLVMAddGlobalInAddressSpace.restype = c_object_p
+
+    library.LLVMAddGlobal.argtypes = [Module, Type, c_char_p]
+    library.LLVMAddGlobal.restype = c_object_p
 
     library.LLVMArrayType.argtypes = [Type, c_uint]
     library.LLVMArrayType.restype = c_object_p
@@ -489,6 +752,10 @@ def register_library(library):
     library.LLVMCreateMemoryBufferWithContentsOfFile.argtypes = [c_char_p,
             POINTER(c_object_p), POINTER(c_char_p)]
     library.LLVMCreateMemoryBufferWithContentsOfFile.restype = bool
+
+    library.LLVMDeleteFunction.argtypes = [Value]
+
+    library.LLVMDeleteGlobal.argtypes = [Value]
 
     library.LLVMDisposeMemoryBuffer.argtypes = [MemoryBuffer]
 
@@ -509,8 +776,14 @@ def register_library(library):
             c_int]
     library.LLVMFunctionType.restype = c_object_p
 
+    library.LLVMGetAlignment.argtypes = [GlobalValue]
+    library.LLVMGetAlignment.restype = c_uint
+
     library.LLVMGetArrayLength.argtypes = [Type]
     library.LLVMGetArrayLength.restype = c_uint
+
+    library.LLVMGetAttribute.argtypes = [ArgumentValue]
+    library.LLVMGetAttribute.restype = c_int
 
     library.LLVMGetDataLayout.argtypes = [Module]
     library.LLVMGetDataLayout.restype = c_char_p
@@ -518,10 +791,52 @@ def register_library(library):
     library.LLVMGetElementType.argtypes = [Type]
     library.LLVMGetElementType.restype = c_object_p
 
+    library.LLVMGetFirstFunction.argtypes = [Module]
+    library.LLVMGetFirstFunction.restype = c_object_p
+
+    library.LLVMGetFirstGlobal.argtypes = [Module]
+    library.LLVMGetFirstGlobal.restype = c_object_p
+
+    library.LLVMGetFirstParam.argtypes = [FunctionValue]
+    library.LLVMGetFirstParam.restype = c_object_p
+
+    library.LLVMGetFunctionAttr.argtypes = [FunctionValue]
+    library.LLVMGetFunctionAttr.restype = c_int
+
+    library.LLVMGetFunctionCallConv.argtypes = [FunctionValue]
+    library.LLVMGetFunctionCallConv.restype = c_uint
+
+    library.LLVMGetGC.argtypes = [FunctionValue]
+    library.LLVMGetGC.restype = c_char_p
+
     library.LLVMGetGlobalContext.restype = c_object_p
+
+    library.LLVMGetInitializer.argtypes = [GlobalValue]
+    library.LLVMGetInitializer.restype = c_object_p
 
     library.LLVMGetIntTypeWidth.argtypes = [Type]
     library.LLVMGetIntTypeWidth.restype = c_uint
+
+    library.LLVMGetIntrinsicID.argtypes = [FunctionValue]
+    library.LLVMGetIntrinsicID.restype = c_uint
+
+    library.LLVMGetLinkage.argtypes = [GlobalValue]
+    library.LLVMGetLinkage.restype = c_int
+
+    library.LLVMGetNamedFunction.argtypes = [Module, c_char_p]
+    library.LLVMGetNamedFunction.restype = c_object_p
+
+    library.LLVMGetNamedGlobal.argtypes = [Module, c_char_p]
+    library.LLVMGetNamedGlobal.restype = c_object_p
+
+    library.LLVMGetNextFunction.argtypes = [Value]
+    library.LLVMGetNextFunction.restype = c_object_p
+
+    library.LLVMGetNextGlobal.argtypes = [Value]
+    library.LLVMGetNextGlobal.restype = c_object_p
+
+    library.LLVMGetNextParam.argtypes = [Value]
+    library.LLVMGetNextParam.restype = c_object_p
 
     library.LLVMGetParamTypes.argtypes = [Type, POINTER(c_object_p)]
 
@@ -530,6 +845,9 @@ def register_library(library):
 
     library.LLVMGetReturnType.argtypes = [Type]
     library.LLVMGetReturnType.restype = c_object_p
+
+    library.LLVMGetSection.argtypes = [GlobalValue]
+    library.LLVMGetSection.restype = c_char_p
 
     library.LLVMGetStructElementTypes.argtypes = [Type, POINTER(c_object_p)]
 
@@ -550,6 +868,9 @@ def register_library(library):
 
     library.LLVMGetVectorSize.argtypes = [Type]
     library.LLVMGetVectorSize.restype = c_uint
+
+    library.LLVMGetVisibility.argtypes = [GlobalValue]
+    library.LLVMGetVisibility.restype = c_int
 
     library.LLVMHalfTypeInContext.argtypes = [Context]
     library.LLVMHalfTypeInContext.result = c_object_p
@@ -572,14 +893,23 @@ def register_library(library):
     library.LLVMIntTypeInContext.argtypes = [Context, c_uint]
     library.LLVMIntTypeInContext.result = c_object_p
 
+    library.LLVMIsDeclaration.argtypes = [GlobalValue]
+    library.LLVMIsDeclaration.restype = c_bool
+
     library.LLVMIsFunctionVarArg.argtypes = [Type]
     library.LLVMIsFunctionVarArg.restype = c_bool
+
+    library.LLVMIsGlobalConstant.argtypes = [GlobalValue]
+    library.LLVMIsGlobalConstant.restype = c_bool
 
     library.LLVMIsOpaqueStruct.argtypes = [Type]
     library.LLVMIsOpaqueStruct.restype = c_bool
 
     library.LLVMIsPackedStruct.argtypes = [Type]
     library.LLVMIsPackedStruct.restype = c_bool
+
+    library.LLVMIsThreadLocal.argtypes = [GlobalValue]
+    library.LLVMIsThreadLocal.restype = c_bool
 
     library.LLVMLabelTypeInContext.argtypes = [Context]
     library.LLVMLabelTypeInContext.result = c_object_p
@@ -593,13 +923,35 @@ def register_library(library):
     library.LLVMPointerType.argtypes = [Type, c_uint]
     library.LLVMPointerType.restype = c_object_p
 
+    library.LLVMRemoveAttribute.argtypes = [ArgumentValue, Attribute]
+
+    library.LLVMRemoveFunctionAttr.argtypes = [FunctionValue, Attribute]
+
+    library.LLVMSetAlignment.argtypes = [GlobalValue, c_uint]
+
     library.LLVMSetDataLayout.argtypes = [Module, c_char_p]
+
+    library.LLVMSetFunctionCallConv.argtypes = [FunctionValue, c_uint]
+
+    library.LLVMSetGC.argtypes = [FunctionValue, c_char_p]
+
+    library.LLVMSetGlobalConstant.argtypes = [GlobalValue]
+
+    library.LLVMSetInitializer.argtypes = [GlobalValue, ConstantValue]
+
+    library.LLVMSetLinkage.argtypes = [GlobalValue, c_int]
 
     library.LLVMSetModuleInlineAsm.argtypes = [Module, c_char_p]
 
+    library.LLVMSetSection.argtypes = [GlobalValue, c_char_p]
+
     library.LLVMSetTarget.argtypes = [Module, c_char_p]
 
+    library.LLVMSetThreadLocal.argtypes = [GlobalValue]
+
     library.LLVMSetValueName.argtypes = [Value, c_char_p]
+
+    library.LLVMSetVisibility.argtypes = [GlobalValue, c_int]
 
     library.LLVMStructCreateNamed.argtypes = [Context, c_char_p]
     library.LLVMStructCreateNamed.restype = c_object_p
