@@ -26,8 +26,9 @@ class LLVMObject(object):
 
     This class should never be instantiated outside of this package.
     """
-    def __init__(self, ptr, ownable=True, disposer=None):
-        assert isinstance(ptr, c_object_p)
+    def __init__(self, ptr=None, ownable=True, disposer=None):
+        if ptr:
+            assert isinstance(ptr, c_object_p)
 
         self._ptr = self._as_parameter_ = ptr
 
@@ -36,6 +37,7 @@ class LLVMObject(object):
         self._disposer = disposer
 
         self._owned_objects = []
+        self._references = {}
 
     def take_ownership(self, obj):
         """Take ownership of another object.
@@ -52,6 +54,33 @@ class LLVMObject(object):
 
         self._owned_objects.append(obj)
         obj._self_owned = False
+
+    def _set_ref(self, name, obj):
+        """Create a reference to another object in this one.
+
+        This method has 2 main purposes:
+
+          1) Store a reference to another object so it can be used as part of a
+             future API call.
+          2) Store a reference to a parent object so the parent object doesn't
+             lose all references and become garbage collected, possibly freeing
+             resources used by this object.
+
+        The focus of this API is internal and very low level. It is highly
+        unlikely you will need to use it from external code.
+        """
+        if name in self._references:
+            raise Exception('Reference already stored: %s' % name)
+
+        self._references[name] = obj
+
+    def _get_ref(self, name):
+        """Obtain a previously stored object from the reference table.
+
+        This complements create_reference(). You likely shouldn't be using this
+        from external code.
+        """
+        return self._references[name]
 
     def from_param(self):
         """ctypes function that converts this object to a function parameter."""
