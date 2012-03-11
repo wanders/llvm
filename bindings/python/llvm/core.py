@@ -64,7 +64,7 @@ class OpCode(object):
         OpCode._value_map[value] = opcode
         setattr(OpCode, name, opcode)
 
-def TypeKind(object):
+class TypeKind(object):
     """Represents a TypeKind enumeration."""
 
     _value_map = {}
@@ -632,6 +632,9 @@ def register_library(library):
 def register_enumerations():
     for name, value in enumerations.OpCodes:
         OpCode.register(name, value)
+
+    for name, value in enumerations.TypeKinds:
+        TypeKind.register(name, value)
 
 register_library(lib)
 register_enumerations()
