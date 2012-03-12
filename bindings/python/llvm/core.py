@@ -475,13 +475,17 @@ class FunctionType(Type):
 
         return Type(ptr, context=self._get_ref('context'))
 
+    @property
+    def parameter_count(self):
+        return lib.LLVMCountParamTypes(self)
+
     def get_parameters(self):
         """The parameters to the function.
 
         This is a generator for Type instances.
         """
 
-        count = lib.LLVMCountParamTypes(self)
+        count = self.parameter_count
         arr = (c_object_p * count)()
         ref = byref(arr[0])
         lib.LLVMGetParamTypes(self, ref)
@@ -528,9 +532,12 @@ class ArrayType(Type):
     """Represents an array Type."""
 
     @CachedProperty
+    def element_count(self):
+        return lib.LLVMGetArrayLength(self)
+
+    @CachedProperty
     def element_type(self):
-        count = lib.LLVMGetArrayLength(self)
-        ptr = lib.LLVMGetArrayType(self, count)
+        ptr = lib.LLVMGetArrayType(self, self.element_count)
 
         return Type(ptr, context=self._get_ref('context'))
 
@@ -538,7 +545,7 @@ class PointerType(Type):
     """Represents a pointer Type."""
 
     @CachedProperty
-    def pointer_type(self):
+    def element_type(self):
         space = lib.LLVMGetPointerAddressSpace(self)
         ptr = lib.LLVMPointerType(self, space)
 
@@ -548,39 +555,14 @@ class VectorType(Type):
     """Represents a vector Type."""
 
     @CachedProperty
-    def element_type(self):
-        size = lib.LLVMGetVectorSize(self)
-        ptr = lib.LLVMVectorType(self, size)
-
-        return Type(ptr, context=self._get_ref('context'))
-
-class Value(LLVMObject):
-    def __init__(self, ptr, context=None, module=None):
-        LLVMObject.__init__(self, ptr)
-
-        if module:
-            self._set_ref('module', module)
-            self._set_ref('context', module._get_ref('context'))
-
-        if context:
-            self._set_ref('context', context)
+    def element_count(self):
+        return lib.LLVMGetVectorSize(self)
 
     @CachedProperty
-    def type(self):
-        ptr = lib.LLVMTypeOf(self)
+    def element_type(self):
+        ptr = lib.LLVMVectorType(self, self.element_count)
 
         return Type(ptr, context=self._get_ref('context'))
-
-    @property
-    def name(self):
-        return lib.LLVMGetValueName(self).value
-
-    @name.setter
-    def name(self, value):
-        lib.LLVMSetValueName(self, value)
-
-class ConstantValue(Value):
-    pass
 
 class GlobalValue(Value):
     """Represents a global Value."""
@@ -863,8 +845,6 @@ def register_library(library):
     library.LLVMGetTypeKind.argtypes = [Type]
     library.LLVMGetTypeKind.restype = c_int
 
-    library.LLVMGetValueName.argtypes = [Value]
-    library.LLVMGetValueName.restype = c_char_p
 
     library.LLVMGetVectorSize.argtypes = [Type]
     library.LLVMGetVectorSize.restype = c_uint
@@ -949,7 +929,6 @@ def register_library(library):
 
     library.LLVMSetThreadLocal.argtypes = [GlobalValue]
 
-    library.LLVMSetValueName.argtypes = [Value, c_char_p]
 
     library.LLVMSetVisibility.argtypes = [GlobalValue, c_int]
 
@@ -963,8 +942,6 @@ def register_library(library):
             c_uint, c_int]
     library.LLVMStructTypeInContext.result = c_object_p
 
-    library.LLVMTypeOf.argtypes = [Value]
-    library.LLVMTypeOf.restype = c_object_p
 
     library.LLVMTypeIsSized.argtypes = [Type]
     library.LLVMTypeIsSized.restype = c_bool
