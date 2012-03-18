@@ -24,11 +24,13 @@ http://llvm.org/doxygen/classllvm_1_1Value.html for more.
 from ctypes import c_char_p
 from ctypes import c_int
 from ctypes import c_uint
+from sys import modules
 
 from . import enumerations
 from .common import CachedProperty
 from .common import LLVMObject
 from .common import c_object_p
+from .common import get_library
 from .types import Type
 
 __all__ = [
@@ -39,7 +41,109 @@ __all__ = [
     'Value',
 ]
 
-lib = None
+type_tree = {
+    'Argument': 'Argument',
+    'BasicBlock': 'BasicBlock',
+    'Constant': {
+        '_default': 'Constant',
+        'BlockAddress': 'BlockAddress',
+        'ConstantAggregateZero': 'ConstantAggregateZero',
+        'ConstantArray': 'ConstantArray',
+        #'ConstantDataSequential': {
+        #    '_default': 'ConstantDataSequential',
+        #    'ConstantDataArray': 'ConstantDataArray',
+        #    'ConstantDataVector': 'ConstantDataVector',
+        #},
+        'ConstantExpr': {
+            '_default': 'ConstantExpr',
+            #'BinaryConstantExpr': 'BinaryConstantExpr',
+            #'CompareConstantExpr': 'CompareConstantExpr',
+            #'ExtractElementConstantExpr': 'ExtractElementConstantExpr',
+            #'ExtractValueConstantExpr': 'ExtractValueConstantExpr',
+            #'GetElementPtrConstantExpr': 'GetElmenetPtrConstantExpr',
+            #'InsertElementConstantExpr': 'InsertElementConstnatExpr',
+            #'SelectConstantExpr': 'SelectConstantExpr',
+            #'ShuffleVectorConstantExpr': 'ShuffleVectorConstantExpr',
+            #'UnaryConstantExpr': 'UnaryConstantExpr',
+        },
+        'ConstantFP': 'ConstantFP',
+        'ConstantInt': 'ConstantInt',
+        'ConstantPointerNull': 'ConstantPointerNull',
+        'ConstantStruct': 'ConstantStruct',
+        'ConstantVector': 'ConstantVector',
+        'GlobalValue': {
+            '_default': 'GlobalValue',
+            'Function': 'Function',
+            'GlobalAlias': 'GlobalAlias',
+            'GlobalVariable': 'GlobalVariable',
+        },
+        'UndefValue': 'Undef',
+    },
+    'InlineAsm': 'InlineAsm',
+    'Instruction': {
+        '_default': 'Instruction',
+        #'AtomicCmpXchgInst': 'AtomicCmpXchg',
+        #'AtomicRMWInst': 'AtomicRMW',
+        'BinaryOperator': 'BinaryOperator',
+        'CallInst': {
+            '_default': 'Call',
+            # TODO There are more in this tree
+        },
+        'CmpInst': {
+            '_default': 'Cmp',
+            'FCmpInst': 'FCmp',
+            'ICmpInst': 'ICmp',
+        },
+        'ExtractElementInst': 'ExtractElement',
+        #'FenceInst': 'Fence',
+        'GetElementPtrInst': 'GetElementPtr',
+        'InsertElementInst': 'InsertElementInst',
+        'InsertValueInst': 'InsertValue',
+        'LandingPadInst': 'LandingPad',
+        'PHINode': 'PHINode',
+        'SelectInst': 'Select',
+        'ShuffleVectorInst': 'ShuffleVector',
+        'StoreInst': 'Store',
+        'TerminatorInst': {
+            '_default': 'Terminator',
+            'BranchInst': 'Branch',
+            'IndirectBrInst': 'IndirectBr',
+            'InvokeInst': 'Invoke',
+            'ResumeInst': 'Resume',
+            'ReturnInst': 'Return',
+            'SwitchInst': 'Switch',
+            'UnreachableInst': 'Unreachable',
+        },
+        'UnaryInstruction': {
+            '_default': 'Unary',
+            'AllocaInst': 'Alloca',
+            'CastInst': {
+                '_default': 'CastInst',
+                'BitCastInst': 'BitCast',
+                'FPExtInst': 'FPExt',
+                'FPToSIInst': 'FPToSI',
+                'FPToUIInst': 'FPToUI',
+                'FPTruncInst': 'FPTrunc',
+                'IntToPtrInst': 'IntToPtr',
+                'PtrToIntInst': 'PtrToInt',
+                'SExtInst': 'SExt',
+                'SIToFPInst': 'SIToFP',
+                'TruncInst': 'Trunc',
+                'UIToFPInst': 'UIToFP',
+                'ZExtInst': 'ZExt',
+            },
+        },
+    },
+    'MDNode': 'MDNode',
+    'MDString': 'MDString',
+    #'Operator': 'Operator',
+    #'PseudoSourceValue': {
+    #    '_default': 'PseudoSourceValue',
+    #    'FixedStackPseudoSourceValue': 'FixedStackPseudoSource',
+    #},
+}
+
+lib = get_library()
 
 class OpCode(object):
     """Represents an individual OpCode enumeration."""
@@ -78,111 +182,41 @@ class OpCode(object):
         setattr(OpCode, name, opcode)
 
 class Attribute(object):
-    pass
+    """Represents an LLVMAttribute enumeration."""
+
+    _value_map = {}
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+        self._as_parameter_ = value
+
+    def __repr__(self):
+        return 'Attribute.%s' % self.name
+
+    def from_param(self):
+        return self._as_parameter_
+
+    @staticmethod
+    def from_value(value):
+        result = Attribute._value_map.get(value, None)
+
+        if result is None:
+            raise ValueError('Unknown Attribute: %d' % value)
+
+        return result
+
+    @staticmethod
+    def register(name, value):
+        if value in Attribute._value_map:
+            raise ValueError('Attribute value already registered: %d' % value)
+
+        attribute = Attribute(name, value)
+        Attribute._value_map[value] = attribute
+        setattr(Attribute, name, value)
 
 class Value(LLVMObject):
-    type_tree = {
-        'Constant': {
-            '_default': Constant,
-            'BlockAddress': BlockAddress,
-            'ConstantAggregateZero': ConstantAggregateZero,
-            'ConstantArray': ConstantArray,
-            'ConstantDataSequential': {
-                '_default': ConstantDataSequential,
-                'ConstantDataArray': ConstantDataArray,
-                'ConstantDataVector': ConstantDataVector,
-            },
-            'ConstantExpr': {
-                '_default': ConstantExpr,
-                'BinaryConstantExpr': BinaryConstantExpr,
-                'CompareConstantExpr': CompareConstantExpr,
-                'ExtractElementConstantExpr': ExtractElementConstantExpr,
-                'ExtractValueConstantExpr': ExtractValueConstantExpr,
-                'GetElementPtrConstantExpr': GetElmenetPtrConstantExpr,
-                'InsertElementConstantExpr': InsertElementConstnatExpr,
-                'SelectConstantExpr': SelectConstantExpr,
-                'ShuffleVectorConstantExpr': ShuffleVectorConstantExpr,
-                'UnaryConstantExpr': UnaryConstantExpr,
-            },
-            'ConstantFP': ConstantFP,
-            'ConstantInt': ConstantInt,
-            'ConstantPointerNull': ConstantPointerNull,
-            'ConstantStruct': ConstantStruct,
-            'ConstantVector': ConstantVector,
-            'GlobalValue': {
-                '_default': GlobalValue,
-                'Function': Function,
-                'GlobalAlias': GlobalAlias,
-                'GlobalVariable': GlobalVariable,
-            },
-            'UndefValue': Undef,
-        },
-        'Instruction': {
-            'AtomicCmpXchgInst': AtomicCmpXchg,
-            'AtomicRMWInst': AtomicRMW,
-            'BinaryOperator': BinaryOperator,
-            'CallInst': {
-                '_default': Call,
-                # TODO There are more in this tree
-            },
-            'CmpInst': {
-                '_default': Cmp,
-                'FCmpInst': FCmp,
-                'ICmpInst': ICmpInst,
-            },
-            'ExtractElementInst': ExtractElement,
-            'FencInst': Fence,
-            'GelElementPtrInst': GetElementPtr,
-            'InsertElementInst': InsertElementInst,
-            'InsertValueInst': InsertValue,
-            'LandingPadInst': LandingPad,
-            'PHINode': PHINode,
-            'SelectInst': Select,
-            'ShuffleVectorInst': ShuffleVector,
-            'StoreInst': Store,
-            'TerminatorInst': {
-                '_default': Terminator,
-                'BranchInst': Branch,
-                'IndirectBrInst': IndirectBr,
-                'InvokeInst': Invoke,
-                'ResumeInst': Resume,
-                'ReturnInst': Return,
-                'SwitchInst': Switch,
-                'UnreachableInst': Unreachable,
-            },
-            'UnaryInstruction': {
-                '_default': Unary,
-                'AllocaInst': Alloca,
-                'CastInst': {
-                    '_default': CastInst,
-                    'BitCastInst': BitCast,
-                    'FPExtInst': FPExt,
-                    'FPToSIInst': FPToSI,
-                    'FPToUIInst': FPToUI,
-                    'FPTruncInst': FPTrunc,
-                    'IntToPtrInst': IntToPtr,
-                    'PtrToInstInst': PtrToInt,
-                    'SExtInst': SExt,
-                    'SIToFPInst': SIToFP,
-                    'TruncInst': Trunc,
-                    'UIToFPInst': UIToFP,
-                    'ZExtInst': ZExt,
-                },
-            },
-        },
-        'Operator': Operator,
-        'Argument': Argument,
-        'BasicBlock': BasicBlock,
-        'InlineAsm': InlineAsm,
-        'MDNode': MDNode,
-        'MDString': MDString,
-        'PseudoSourceValue': {
-            '_default': PseudoSourceValue,
-            'FixedStackPseudoSourceValue': FixedStackPseudoSource,
-        },
-
-    }
-
     def __init__(self, ptr, context=None, module=None):
         LLVMObject.__init__(self, ptr)
 
@@ -265,18 +299,6 @@ class User(Value):
 class Constant(User):
     pass
 
-class GlobalValue(Constant):
-    pass
-
-class Function(GlobalValue):
-    pass
-
-class GlobalVariable(GlobalValue):
-    pass
-
-class BasicBlock(Value):
-    pass
-
 class Instruction(User):
     """Common base class for all LLVM instructions."""
 
@@ -294,12 +316,6 @@ class Instruction(User):
 class Operator(User):
     pass
 
-class Argument(Value):
-    pass
-
-class MDNode(Value):
-    pass
-
 class Use(LLVMObject):
     def __init__(self, ptr, context):
         LLVMObject.__init__(ptr, context=context)
@@ -314,12 +330,45 @@ class Use(LLVMObject):
         ptr = lib.LLVMGetUsedValue(self)
         return Value(ptr, context=self._get_ref('context'))
 
+def register_types(type_map, parent=None):
+    """Dynamically register Python class types in the module.
+
+    Here there be dragons. This takes the class tree defined at the top of this
+    module and ensures the Python classes are present. This dynamically creates
+    Python classes if they are missing (so we don't have to waste source code
+    typing empty classes) and registers them where the need to be, etc.
+    """
+    mod = modules[__name__]
+    assert mod is not None
+
+    def create_type(llvm_class, python_class, parent_class):
+        return type(python_class, (getattr(mod, parent_class),), {})
+
+    for k, v in type_map.iteritems():
+        if isinstance(v, dict):
+            assert '_default' in v
+
+            if not hasattr(mod, v['_default']):
+                t = create_type(k, v['_default'], parent)
+                setattr(mod, v['_default'], t)
+
+            register_types(v, parent=v['_default'])
+            continue
+
+        if k == '_default':
+            continue
+
+        if hasattr(mod, v):
+            continue
+
+        setattr(mod, v, create_type(k, v, parent))
+
 def register_library(library):
     """Registers functions with ctypes library instance."""
 
-    library.LLVMAddAttribute.argtypes = [ArgumentValue, Attribute]
+    library.LLVMAddAttribute.argtypes = [Argument, Attribute]
 
-    library.LLVMAddFunctionAttr.argtypes = [FunctionValue, Attribute]
+    library.LLVMAddFunctionAttr.argtypes = [Function, Attribute]
 
     library.LLVMDeleteFunction.argtypes = [Value]
 
@@ -328,30 +377,30 @@ def register_library(library):
     library.LLVMGetAlignment.argtypes = [GlobalValue]
     library.LLVMGetAlignment.restype = c_uint
 
-    library.LLVMGetAttribute.argtypes = [ArgumentValue]
+    library.LLVMGetAttribute.argtypes = [Argument]
     library.LLVMGetAttribute.restype = c_int
 
     library.LLVMDumpValue.argtypes = [Value]
 
-    library.LLVMGetFirstParam.argtypes = [FunctionValue]
+    library.LLVMGetFirstParam.argtypes = [Function]
     library.LLVMGetFirstParam.restype = c_object_p
 
     library.LLVMGetFirstUse.argtypes = [Value]
     library.LLVMGetFirstUse.restype = c_object_p
 
-    library.LLVMGetFunctionAttr.argtypes = [FunctionValue]
+    library.LLVMGetFunctionAttr.argtypes = [Function]
     library.LLVMGetFunctionAttr.restype = c_int
 
-    library.LLVMGetFunctionCallConv.argtypes = [FunctionValue]
+    library.LLVMGetFunctionCallConv.argtypes = [Function]
     library.LLVMGetFunctionCallConv.restype = c_uint
 
-    library.LLVMGetGC.argtypes = [FunctionValue]
+    library.LLVMGetGC.argtypes = [Function]
     library.LLVMGetGC.restype = c_char_p
 
     library.LLVMGetInitializer.argtypes = [GlobalValue]
     library.LLVMGetInitializer.restype = c_object_p
 
-    library.LLVMGetIntrinsicID.argtypes = [FunctionValue]
+    library.LLVMGetIntrinsicID.argtypes = [Function]
     library.LLVMGetIntrinsicID.restype = c_uint
 
     library.LLVMGetLinkage.argtypes = [GlobalValue]
@@ -405,19 +454,19 @@ def register_library(library):
     library.LLVMIsThreadLocal.argtypes = [GlobalValue]
     library.LLVMIsThreadLocal.restype = bool
 
-    library.LLVMRemoveAttribute.argtypes = [ArgumentValue, Attribute]
+    library.LLVMRemoveAttribute.argtypes = [Argument, Attribute]
 
-    library.LLVMRemoveFunctionAttr.argtypes = [FunctionValue, Attribute]
+    library.LLVMRemoveFunctionAttr.argtypes = [Function, Attribute]
 
     library.LLVMSetAlignment.argtypes = [GlobalValue, c_uint]
 
-    library.LLVMSetFunctionCallConv.argtypes = [FunctionValue, c_uint]
+    library.LLVMSetFunctionCallConv.argtypes = [Function, c_uint]
 
-    library.LLVMSetGC.argtypes = [FunctionValue, c_char_p]
+    library.LLVMSetGC.argtypes = [Function, c_char_p]
 
     library.LLVMSetGlobalConstant.argtypes = [GlobalValue]
 
-    library.LLVMSetInitializer.argtypes = [GlobalValue, ConstantValue]
+    library.LLVMSetInitializer.argtypes = [GlobalValue, Constant]
 
     library.LLVMSetLinkage.argtypes = [GlobalValue, c_int]
 
@@ -449,13 +498,15 @@ def register_library(library):
             for k2, v2 in v.iteritems():
                 handle_entry(k2, v2)
 
-    for k, v in Value.type_tree.iteritems():
+    for k, v in type_tree.iteritems():
         handle_entry(k, v)
 
 def register_enumerations():
     for name, value in enumerations.OpCodes:
         OpCode.register(name, value)
 
+register_types(type_tree, parent='Value')
 register_library(lib)
 register_enumerations()
+
 
