@@ -18,7 +18,9 @@ from .common import c_object_p
 from .common import get_library
 from .core import Context
 from .core import MemoryBuffer
+from .types import FunctionType
 from .types import Type
+from .values import Value
 
 __all__ = [
     'lib',
@@ -268,11 +270,11 @@ class Module(LLVMObject):
             raise Exception('Error when writing bit code for module.')
 
 def register_library(library):
-    #library.LLVMAddAlias.argtypes = [Module, Type, Value, c_char_p]
-    #library.LLVMAddAlias.restype = c_object_p
+    library.LLVMAddAlias.argtypes = [Module, Type, Value, c_char_p]
+    library.LLVMAddAlias.restype = c_object_p
 
-    #library.LLVMAddFunction.argtypes = [Module, c_char_p, FunctionType]
-    #library.LLVMAddFunction.restype = c_object_p
+    library.LLVMAddFunction.argtypes = [Module, c_char_p, FunctionType]
+    library.LLVMAddFunction.restype = c_object_p
 
     library.LLVMAddGlobalInAddressSpace.argtypes = [Module, Type, c_char_p,
             c_uint]
