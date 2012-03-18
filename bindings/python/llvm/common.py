@@ -17,6 +17,7 @@ __all__ = [
     'c_object_p',
     'find_library',
     'get_library',
+    'register_apis',
 ]
 
 c_object_p = POINTER(c_void_p)
@@ -142,3 +143,22 @@ def get_library(fresh=False):
     result = cdll.LoadLibrary(l)
     lib = result
     return result
+
+def register_apis(apis, library):
+    """Register APIs with a libLLVM ctypes library instance.
+
+    This takes a dictionary of str C function names to 2-tuples. The first
+    element in the tuple is the return value of the function, or None if it
+    is void. The second element is an array of the argument types to the
+    function.
+
+    This function likely won't be called outside of this package.
+    """
+    for name, (return_type, arguments) in apis.iteritems():
+        fn = getattr(library, name)
+
+        if len(arguments) > 0:
+            fn.argtypes = arguments
+
+        if return_type is not None:
+            fn.restype = return_type
