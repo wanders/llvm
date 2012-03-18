@@ -29,9 +29,7 @@ class LLVMObject(object):
     """
     def __init__(self, ptr=None, ownable=True, disposer=None):
         if ptr:
-            assert isinstance(ptr, c_object_p)
-
-        self._ptr = self._as_parameter_ = ptr
+            self._set_pointer(ptr)
 
         self._self_owned = True
         self._ownable = ownable
@@ -55,6 +53,19 @@ class LLVMObject(object):
 
         self._owned_objects.append(obj)
         obj._self_owned = False
+
+    def release_ownership(self, obj):
+        """Release ownership of another object.
+
+        This is the opposite of take_owernship(). It is called rarely in
+        comparison to take_ownership().
+        """
+
+        # Yes, this will throw a ValueError if obj isn't found. This is
+        # intentional, as release_ownership() should only be called exactly
+        # once after take_ownership() is.
+        self._owned_objects.remove(obj)
+        obj._self_owned = True
 
     def _set_ref(self, name, obj):
         """Create a reference to another object in this one.
@@ -82,6 +93,15 @@ class LLVMObject(object):
         from external code.
         """
         return self._references[name]
+
+    def _set_pointer(self, ptr):
+        """Switch out the internal pointer to another one.
+
+        If you find yourself calling this, please document at the call site
+        why.
+        """
+        assert isinstance(ptr, c_object_p)
+        self._ptr = self._as_parameter_ = ptr
 
     def from_param(self):
         """ctypes function that converts this object to a function parameter."""
