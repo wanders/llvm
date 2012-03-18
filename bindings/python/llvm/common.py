@@ -126,10 +126,19 @@ def find_library():
 
     return None
 
-def get_library():
+lib = None
+
+def get_library(fresh=False):
     """Obtain a reference to the llvm library."""
-    lib = find_library()
-    if not lib:
+    global lib
+
+    if not fresh and lib:
+        return lib
+
+    l = find_library()
+    if not l:
         raise Exception('LLVM shared library not found!')
 
-    return cdll.LoadLibrary(lib)
+    result = cdll.LoadLibrary(l)
+    lib = result
+    return result
