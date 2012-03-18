@@ -104,7 +104,7 @@ class Module(LLVMObject):
 
             if result:
                 raise Exception('Could not parse bitcode into Module: %s' %
-                        msg)
+                        msg.value)
 
             LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeModule)
 
