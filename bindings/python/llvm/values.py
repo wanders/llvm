@@ -23,11 +23,13 @@ http://llvm.org/doxygen/classllvm_1_1Value.html for more.
 
 from ctypes import c_char_p
 from ctypes import c_int
+from ctypes import c_uint
 
 from . import enumerations
 from .common import CachedProperty
 from .common import LLVMObject
 from .common import c_object_p
+from .types import Type
 
 __all__ = [
     'Constant',
@@ -395,13 +397,13 @@ def register_library(library):
     library.LLVMHasMetadata.restype = c_int
 
     library.LLVMIsDeclaration.argtypes = [GlobalValue]
-    library.LLVMIsDeclaration.restype = c_bool
+    library.LLVMIsDeclaration.restype = bool
 
     library.LLVMIsGlobalConstant.argtypes = [GlobalValue]
-    library.LLVMIsGlobalConstant.restype = c_bool
+    library.LLVMIsGlobalConstant.restype = bool
 
     library.LLVMIsThreadLocal.argtypes = [GlobalValue]
-    library.LLVMIsThreadLocal.restype = c_bool
+    library.LLVMIsThreadLocal.restype = bool
 
     library.LLVMRemoveAttribute.argtypes = [ArgumentValue, Attribute]
 
