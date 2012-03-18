@@ -1,4 +1,4 @@
-#===- module.py - Python LLVM Bindings -----------------------*- python -*--===#
+#===- modules.py - Python LLVM Bindings ----------------------*- python -*--===#
 #
 #                     The LLVM Compiler Infrastructure
 #
@@ -7,6 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 
+from ctypes import POINTER
 from ctypes import c_char_p
 from ctypes import c_int
 from ctypes import c_uint
@@ -15,6 +16,7 @@ from .common import LLVMObject
 from .common import c_object_p
 from .common import get_library
 from .core import Context
+from .core import MemoryBuffer
 from .types import Type
 
 __all__ = [
@@ -36,32 +38,80 @@ class Module(LLVMObject):
     TODO support NamedMetadataOperands
     """
 
-    def __init__(self, name=None, context=None):
+    def __init__(self, name=None, ptr=None, bitcode_filename=None,
+                 bitcode_buffer=None, bitcode_lazy_load=False, context=None):
         """Construct a new module instance.
 
-        It is possible to create empty modules or to build modules from
-        existing sources. In all cases, you have the option of supplying an
-        llvm.core.Context to which to associate the module. If no context is
-        provided, the global context will be used.
+        Modules can be created one of several ways. The specific way depends
+        on the arguments to this function. In all cases, a Context instance
+        to which the module will be attached may be defined via the context
+        argument. If this argument is None (the default), the global context
+        will be used.
 
-        If name is provided, an empty module with the specified str id will be
+        If name is a str, an empty module with the specified str name will be
         created.
-        """
 
+        If bitcode_filename is a str, the Module will be constructed from
+        bitcode in the filename specified.
+
+        If bitcode_buffer is a llvm.core.MemoryBuffer, the Module will be
+        read from that MemoryBuffer instance.
+
+        If ptr is a c_object_p, a Module will be created from this pointer.
+        Please note that consumers outside of the llvm package shouldn't
+        be dealing with raw pointers so they shouldn't be passing this
+        argument.
+
+        If loading the Module from bitcode, the default behavior is to parse
+        the entire bitcode source. To change to lazy loading, set
+        bitcode_lazy_load to True.
+
+        If multiple input sources are defined, behavior is undefined: only
+        define one source for your Module!
+        """
         if context is None:
             context = Context(use_global=True)
 
-        if name is None:
-            raise Exception('You must supply a name to create a module.')
-
-        ptr = None
+        if ptr:
+            LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeModule)
+            self._set_ref('context', context)
+            return
 
         if name:
-            ptr = lib.LLVMModuleCreateWithNameInContext(name, context,
-                    disposer=lib.LLVMDisposeModule)
+            ptr = lib.LLVMModuleCreateWithNameInContext(name, context)
+            LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeModule)
+            self._set_ref('context', context)
+            return
 
-        LLVMObject.__init__(self, ptr)
-        self._set_ref('context', context)
+        if bitcode_filename:
+            bitcode_buffer = MemoryBuffer(filename=bitcode_filename)
+
+        if bitcode_buffer:
+            msg = c_char_p()
+            ptr = c_object_p()
+
+            result = None
+
+            if bitcode_lazy_load:
+                result = lib.LLVMGetBitcodeModuleInContext(context,
+                        bitcode_buffer, byref(ptr), byref(msg))
+            else:
+                result = lib.LLVMParseBitcodeInContext(context, source_buffer,
+                        byref(ptr), byref(msg))
+
+            if result:
+                raise Exception('Could not parse bitcode into Module: %s' %
+                        msg)
+
+            LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeModule)
+
+            if lazy:
+                self.take_ownership(bitcode_buffer)
+
+            self._set_ref('context', context)
+            return
+
+        raise Exception('Insufficient arguments to create Module.')
 
     @property
     def context(self):
@@ -234,6 +284,10 @@ def register_library(library):
 
     library.LLVMDumpModule.argtypes = [Module]
 
+    library.LLVMGetBitcodeModuleInContext.argtypes = [Context, MemoryBuffer,
+            POINTER(c_object_p), POINTER(c_char_p)]
+    library.LLVMGetBitcodeModuleInContext.restype = bool
+
     library.LLVMGetDataLayout.argtypes = [Module]
     library.LLVMGetDataLayout.restype = c_char_p
 
@@ -257,6 +311,10 @@ def register_library(library):
 
     library.LLVMModuleCreateWithNameInContext.argtypes = [c_char_p, Context]
     library.LLVMModuleCreateWithNameInContext.restype = c_object_p
+
+    library.LLVMParseBitcodeInContext.argtypes = [Context, MemoryBuffer,
+            POINTER(c_object_p), POINTER(c_char_p)]
+    library.LLVMParseBitcodeInContext.restype = bool
 
     library.LLVMSetModuleInlineAsm.argtypes = [Module, c_char_p]
 

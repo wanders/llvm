@@ -20,8 +20,9 @@ from ctypes import c_int
 from ctypes import c_uint
 
 __all__ = [
-    "lib",
-    "MemoryBuffer",
+    'lib',
+    'Context',
+    'MemoryBuffer',
 ]
 
 lib = get_library()
