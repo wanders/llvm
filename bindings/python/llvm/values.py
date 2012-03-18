@@ -41,6 +41,12 @@ __all__ = [
     'Value',
 ]
 
+# This data structure maps LLVM class names to Python class names. If the
+# value is a dict, the _default key contains the class name and all other
+# fields contain mappings for child classes of the parent.
+#
+# Some of the Python classes are defined statically in this module. Others are
+# dynamically create at module load time.
 type_tree = {
     'Argument': 'Argument',
     'BasicBlock': 'BasicBlock',
