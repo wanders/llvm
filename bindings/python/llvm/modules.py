@@ -8,6 +8,7 @@
 #===------------------------------------------------------------------------===#
 
 from ctypes import POINTER
+from ctypes import byref
 from ctypes import c_char_p
 from ctypes import c_int
 from ctypes import c_uint
@@ -96,7 +97,7 @@ class Module(LLVMObject):
                 result = lib.LLVMGetBitcodeModuleInContext(context,
                         bitcode_buffer, byref(ptr), byref(msg))
             else:
-                result = lib.LLVMParseBitcodeInContext(context, source_buffer,
+                result = lib.LLVMParseBitcodeInContext(context, bitcode_buffer,
                         byref(ptr), byref(msg))
 
             if result:
@@ -105,7 +106,7 @@ class Module(LLVMObject):
 
             LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeModule)
 
-            if lazy:
+            if bitcode_lazy_load:
                 self.take_ownership(bitcode_buffer)
 
             self._set_ref('context', context)
