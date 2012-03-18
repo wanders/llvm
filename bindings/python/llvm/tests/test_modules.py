@@ -1,6 +1,6 @@
 from .base import TestBase
 
-from ..core import Module
+from ..modules import Module
 
 class TestModule(TestBase):
     def test_construct_global(self):

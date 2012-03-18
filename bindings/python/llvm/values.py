@@ -23,10 +23,11 @@ http://llvm.org/doxygen/classllvm_1_1Value.html for more.
 
 from ctypes import c_char_p
 from ctypes import c_int
-from ctypes import c_object_p
 
-from ..common import CachedProperty
-from ..common import LLVMObject
+from . import enumerations
+from .common import CachedProperty
+from .common import LLVMObject
+from .common import c_object_p
 
 __all__ = [
     'Constant',
@@ -37,6 +38,45 @@ __all__ = [
 ]
 
 lib = None
+
+class OpCode(object):
+    """Represents an individual OpCode enumeration."""
+
+    _value_map = {}
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return 'OpCode.%s' % self.name
+
+    @staticmethod
+    def from_value(value):
+        """Obtain an OpCode instance from a numeric value."""
+        result = OpCode._value_map.get(value, None)
+
+        if result is None:
+            raise ValueError('Unknown OpCode: %d' % value)
+
+        return result
+
+    @staticmethod
+    def register(name, value):
+        """Registers a new OpCode enumeration.
+
+        This is called by this module for each enumeration defined in
+        enumerations. You should not need to call this outside this module.
+        """
+        if value in OpCode._value_map:
+            raise ValueError('OpCode value already registered: %d' % value)
+
+        opcode = OpCode(name, value)
+        OpCode._value_map[value] = opcode
+        setattr(OpCode, name, opcode)
+
+class Attribute(object):
+    pass
 
 class Value(LLVMObject):
     type_tree = {
@@ -275,22 +315,66 @@ class Use(LLVMObject):
 def register_library(library):
     """Registers functions with ctypes library instance."""
 
+    library.LLVMAddAttribute.argtypes = [ArgumentValue, Attribute]
+
+    library.LLVMAddFunctionAttr.argtypes = [FunctionValue, Attribute]
+
+    library.LLVMDeleteFunction.argtypes = [Value]
+
+    library.LLVMDeleteGlobal.argtypes = [Value]
+
+    library.LLVMGetAlignment.argtypes = [GlobalValue]
+    library.LLVMGetAlignment.restype = c_uint
+
+    library.LLVMGetAttribute.argtypes = [ArgumentValue]
+    library.LLVMGetAttribute.restype = c_int
+
     library.LLVMDumpValue.argtypes = [Value]
+
+    library.LLVMGetFirstParam.argtypes = [FunctionValue]
+    library.LLVMGetFirstParam.restype = c_object_p
 
     library.LLVMGetFirstUse.argtypes = [Value]
     library.LLVMGetFirstUse.restype = c_object_p
 
+    library.LLVMGetFunctionAttr.argtypes = [FunctionValue]
+    library.LLVMGetFunctionAttr.restype = c_int
+
+    library.LLVMGetFunctionCallConv.argtypes = [FunctionValue]
+    library.LLVMGetFunctionCallConv.restype = c_uint
+
+    library.LLVMGetGC.argtypes = [FunctionValue]
+    library.LLVMGetGC.restype = c_char_p
+
+    library.LLVMGetInitializer.argtypes = [GlobalValue]
+    library.LLVMGetInitializer.restype = c_object_p
+
+    library.LLVMGetIntrinsicID.argtypes = [FunctionValue]
+    library.LLVMGetIntrinsicID.restype = c_uint
+
+    library.LLVMGetLinkage.argtypes = [GlobalValue]
+    library.LLVMGetLinkage.restype = c_int
+
     library.LLVMGetMetadata.argtypes = [Instruction, c_uint]
     library.LLVMGetMetadata.restype = c_object_p
+
+    library.LLVMGetNextFunction.argtypes = [Value]
+    library.LLVMGetNextFunction.restype = c_object_p
+
+    library.LLVMGetNextGlobal.argtypes = [Value]
+    library.LLVMGetNextGlobal.restype = c_object_p
 
     library.LLVMGetNextUse.argtypes = [Use]
     library.LLVMGetNextUse.restype = c_object_p
 
     library.LLVMGetNumOperands.argtypes = [User]
-    library.LLVMGetNumOperands.restype c_int
+    library.LLVMGetNumOperands.restype = c_int
 
     library.LLVMGetOperand.argtypes = [User, c_uint]
     library.LLVMGetOperand.restype = c_object_p
+
+    library.LLVMGetSection.argtypes = [GlobalValue]
+    library.LLVMGetSection.restype = c_char_p
 
     library.LLVMGetUsedValue.argtypes = [Use]
     library.LLVMGetUsedValue.restype = c_object_p
@@ -298,17 +382,54 @@ def register_library(library):
     library.LLVMGetUser.argtypes = [Use]
     library.LLVMGetUser.restype = c_object_p
 
+    library.LLVMGetNextParam.argtypes = [Value]
+    library.LLVMGetNextParam.restype = c_object_p
+
     library.LLVMGetValueName.argtypes = [Value]
     library.LLVMGetValueName.restype = c_char_p
 
+    library.LLVMGetVisibility.argtypes = [GlobalValue]
+    library.LLVMGetVisibility.restype = c_int
+
     library.LLVMHasMetadata.argtypes = [Instruction]
     library.LLVMHasMetadata.restype = c_int
+
+    library.LLVMIsDeclaration.argtypes = [GlobalValue]
+    library.LLVMIsDeclaration.restype = c_bool
+
+    library.LLVMIsGlobalConstant.argtypes = [GlobalValue]
+    library.LLVMIsGlobalConstant.restype = c_bool
+
+    library.LLVMIsThreadLocal.argtypes = [GlobalValue]
+    library.LLVMIsThreadLocal.restype = c_bool
+
+    library.LLVMRemoveAttribute.argtypes = [ArgumentValue, Attribute]
+
+    library.LLVMRemoveFunctionAttr.argtypes = [FunctionValue, Attribute]
+
+    library.LLVMSetAlignment.argtypes = [GlobalValue, c_uint]
+
+    library.LLVMSetFunctionCallConv.argtypes = [FunctionValue, c_uint]
+
+    library.LLVMSetGC.argtypes = [FunctionValue, c_char_p]
+
+    library.LLVMSetGlobalConstant.argtypes = [GlobalValue]
+
+    library.LLVMSetInitializer.argtypes = [GlobalValue, ConstantValue]
+
+    library.LLVMSetLinkage.argtypes = [GlobalValue, c_int]
 
     library.LLVMSetMetadata.argtypes = [Instruction, c_uint, MDNode]
 
     library.LLVMSetOperand.argtypes = [User, c_uint, Value]
 
+    library.LLVMSetSection.argtypes = [GlobalValue, c_char_p]
+
+    library.LLVMSetThreadLocal.argtypes = [GlobalValue]
+
     library.LLVMSetValueName.argtypes = [Value, c_char_p]
+
+    library.LLVMSetVisibility.argtypes = [GlobalValue, c_int]
 
     library.LLVMTypeOf.argtypes = [Value]
     library.LLVMTypeOf.restype = c_object_p
@@ -328,3 +449,11 @@ def register_library(library):
 
     for k, v in Value.type_tree.iteritems():
         handle_entry(k, v)
+
+def register_enumerations():
+    for name, value in enumerations.OpCodes:
+        OpCode.register(name, value)
+
+register_library(lib)
+register_enumerations()
+

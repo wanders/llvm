@@ -7,16 +7,22 @@
 #
 #===------------------------------------------------------------------------===#
 
-r"""This module defines types related to LLVM modules.
-
-It contains the main definition of an LLVM module and classes which are tightly
-related.
-"""
+from ctypes import c_char_p
+from ctypes import c_int
+from ctypes import c_uint
 
 from .common import LLVMObject
+from .common import c_object_p
+from .common import get_library
 from .core import Context
+from .types import Type
 
-lib = None
+__all__ = [
+    'lib',
+    'Module',
+]
+
+lib = get_library()
 
 class Module(LLVMObject):
     """Represents an LLVM module.
@@ -30,7 +36,7 @@ class Module(LLVMObject):
     TODO support NamedMetadataOperands
     """
 
-    def __init__(self, ptr=None, name=None, context=None):
+    def __init__(self, name=None, context=None):
         """Construct a new module instance.
 
         It is possible to create empty modules or to build modules from
@@ -189,7 +195,6 @@ class Module(LLVMObject):
 
     def write(self, filename=None, fh=None):
         """Write the module bit code.
-
         This can be used to write the contents of the module to a file or to an
         open file handle. If both arguments are defined, behavior is undefined.
         """
@@ -212,13 +217,11 @@ class Module(LLVMObject):
             raise Exception('Error when writing bit code for module.')
 
 def register_library(library):
-    """Register C APIs with ctypes library instance."""
+    #library.LLVMAddAlias.argtypes = [Module, Type, Value, c_char_p]
+    #library.LLVMAddAlias.restype = c_object_p
 
-    library.LLVMAddAlias.argtypes = [Module, Type, Value, c_char_p]
-    library.LLVMAddAlias.restype = c_object_p
-
-    library.LLVMAddFunction.argtypes = [Module, c_char_p, FunctionType]
-    library.LLVMAddFunction.restype = c_object_p
+    #library.LLVMAddFunction.argtypes = [Module, c_char_p, FunctionType]
+    #library.LLVMAddFunction.restype = c_object_p
 
     library.LLVMAddGlobalInAddressSpace.argtypes = [Module, Type, c_char_p,
             c_uint]
@@ -255,9 +258,9 @@ def register_library(library):
     library.LLVMModuleCreateWithNameInContext.argtypes = [c_char_p, Context]
     library.LLVMModuleCreateWithNameInContext.restype = c_object_p
 
-    library.LLVMSetDataLayout.argtypes = [Module, c_char_p]
-
     library.LLVMSetModuleInlineAsm.argtypes = [Module, c_char_p]
+
+    library.LLVMSetDataLayout.argtypes = [Module, c_char_p]
 
     library.LLVMSetTarget.argtypes = [Module, c_char_p]
 
@@ -266,3 +269,5 @@ def register_library(library):
 
     library.LLVMWriteBitcodeToFile.argtypes = [Module, c_char_p]
     library.LLVMWriteBitcodeToFile.restype = c_int
+
+register_library(lib)
