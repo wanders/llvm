@@ -7,17 +7,13 @@
 #
 #===------------------------------------------------------------------------===#
 
-from .common import CachedProperty
 from .common import LLVMObject
 from .common import c_object_p
 from .common import get_library
 
 from ctypes import POINTER
 from ctypes import byref
-from ctypes import c_bool
 from ctypes import c_char_p
-from ctypes import c_int
-from ctypes import c_uint
 
 __all__ = [
     'lib',
