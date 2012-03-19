@@ -34,6 +34,32 @@ extern "C" {
  *
  * @{
  */
+typedef enum {
+  LLVMSymbolUnknown,
+  LLVMSymbolData,
+  LLVMSymbolDebug,
+  LLVMSymbolFile,
+  LLVMSymbolFunction,
+  LLVMSymbolOther
+} LLVMObjectFileSymbolType;
+
+typedef enum {
+  LLVMSymbolFlagNone           = 0,
+  /** Symbol is defined in another object file. */
+  LLVMSymbolFlagUndefined      = 1U << 0,
+  /** Global symbol. */
+  LLVMSymbolFlagGlobal         = 1U << 1,
+  /** Weak symbol. */
+  LLVMSymbolFlagWeak           = 1U << 2,
+  /** Absolute symbol. */
+  LLVMSymbolFlagAbsolute       = 1U << 3,
+  /** Thread local symbol. */
+  LLVMSymbolFlagThreadLocal    = 1U << 4,
+  /** Symbol has common linkage. */
+  LLVMSymbolFlagCommon         = 1U << 5,
+  /** Specific to the object file format (e.g. section symbols). */
+  LLVMSymbolFlagFormatSpecific = 1U << 31
+} LLVMObjectFileSymbolFlags;
 
 // Opaque type wrappers
 typedef struct LLVMOpaqueObjectFile *LLVMObjectFileRef;
@@ -83,6 +109,23 @@ const char *LLVMGetSymbolName(LLVMSymbolIteratorRef SI);
 uint64_t LLVMGetSymbolAddress(LLVMSymbolIteratorRef SI);
 uint64_t LLVMGetSymbolFileOffset(LLVMSymbolIteratorRef SI);
 uint64_t LLVMGetSymbolSize(LLVMSymbolIteratorRef SI);
+
+/**
+ * Obtain the type of a symbol in an ObjectFile.
+ */
+LLVMObjectFileSymbolType LLVMGetSymbolType(LLVMSymbolIteratorRef SI);
+
+/**
+ * Obtain the ASCII character this symbol would be represented with in nm.
+ */
+char LLVMGetSymbolNMTypeChar(LLVMSymbolIteratorRef SI);
+
+/**
+ * Obtain symbol flags for a symbol.
+ *
+ * This returns a bitwise OR of LLVMObjectFileSymbolFlags.
+ */
+LLVMObjectFileSymbolFlags LLVMGetSymbolFlags(LLVMSymbolIteratorRef SI);
 
 // RelocationRef accessors
 uint64_t LLVMGetRelocationAddress(LLVMRelocationIteratorRef RI);

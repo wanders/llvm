@@ -164,6 +164,30 @@ uint64_t LLVMGetSymbolSize(LLVMSymbolIteratorRef SI) {
   return ret;
 }
 
+LLVMObjectFileSymbolType LLVMGetSymbolType(LLVMSymbolIteratorRef SI) {
+  SymbolRef::Type ret;
+  if (error_code ec = (*unwrap(SI))->getType(ret))
+    report_fatal_error(ec.message());
+
+  return (LLVMObjectFileSymbolType)ret;
+}
+
+char LLVMGetSymbolNMTypeChar(LLVMSymbolIteratorRef SI) {
+  char ret;
+  if (error_code ec = (*unwrap(SI))->getNMTypeChar(ret))
+    report_fatal_error(ec.message());
+
+  return ret;
+}
+
+LLVMObjectFileSymbolFlags LLVMGetSymbolFlags(LLVMSymbolIteratorRef SI) {
+  uint32_t ret;
+  if (error_code ec = (*unwrap(SI))->getFlags(ret))
+    report_fatal_error(ec.message());
+
+  return (LLVMObjectFileSymbolFlags)ret;
+}
+
 // RelocationRef accessors
 uint64_t LLVMGetRelocationAddress(LLVMRelocationIteratorRef RI) {
   uint64_t ret;
