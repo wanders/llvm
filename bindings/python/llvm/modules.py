@@ -12,6 +12,7 @@ from ctypes import byref
 from ctypes import c_char_p
 from ctypes import c_int
 from ctypes import c_uint
+from ctypes import c_void_p
 
 from .common import LLVMObject
 from .common import c_object_p
@@ -41,8 +42,10 @@ class Module(LLVMObject):
     TODO support NamedMetadataOperands
     """
 
-    def __init__(self, name=None, ptr=None, bitcode_filename=None,
-                 bitcode_buffer=None, bitcode_lazy_load=False, context=None):
+    def __init__(self, name=None, bitcode_filename=None, bitcode_buffer=None,
+                 bitcode_lazy_load=False,
+                 assembly_filename=None, assembly_buffer=None,
+                 ptr=None, context=None):
         """Construct a new module instance.
 
         Modules can be created one of several ways. The specific way depends
@@ -59,6 +62,12 @@ class Module(LLVMObject):
 
         If bitcode_buffer is a llvm.core.MemoryBuffer, the Module will be
         read from that MemoryBuffer instance.
+
+        If assembly_filename is a str, the Module will be constructed from
+        parsed LLVM Assembly in the file specified (typically a .ll file).
+
+        If assembly_buffer is a str or llvm.core.MemoryBuffer, the Module
+        will be constructed from parsed LLVM Assembly in that buffer.
 
         If ptr is a c_object_p, a Module will be created from this pointer.
         Please note that consumers outside of the llvm package shouldn't
@@ -110,6 +119,44 @@ class Module(LLVMObject):
 
             if bitcode_lazy_load:
                 self.take_ownership(bitcode_buffer)
+
+            self._set_ref('context', context)
+            return
+
+        if assembly_filename:
+            msg = c_char_p()
+            ptr = c_object_p(c_void_p(None))
+
+            result = lib.LLVMAssemblyParseFileInContext(context,
+                    assembly_filename, byref(ptr), byref(msg))
+            if result:
+                raise Exception('Error parsing assembly from file: %s' %
+                        msg.value)
+
+            LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeModule)
+            self._set_ref('context', context)
+            return
+
+        if assembly_buffer:
+            assert isinstance(assembly_buffer, (str, MemoryBuffer))
+
+            msg = c_char_p()
+            ptr = c_object_p()
+
+            fn = lib.LLVMAssemblyParseStringInContext
+            args = [context, assembly_buffer, byref(ptr), byref(msg)]
+
+            if isinstance(assembly_buffer, MemoryBuffer):
+                fn = lib.LLVMAssemblyParseMemoryBufferInContext
+
+            if fn(*args):
+                raise Exception('Error parsing assembly: %s' % msg.value)
+
+            LLVMObject.__init__(self, c_object_p(ptr),
+                    disposer=lib.LLVMDisposeModule)
+
+            if isinstance(assembly_buffer, MemoryBuffer):
+                self.take_ownership(assembly_buffer)
 
             self._set_ref('context', context)
             return
@@ -282,6 +329,18 @@ def register_library(library):
 
     library.LLVMAddGlobal.argtypes = [Module, Type, c_char_p]
     library.LLVMAddGlobal.restype = c_object_p
+
+    library.LLVMAssemblyParseFileInContext.argtypes = [Context, c_char_p,
+            POINTER(c_object_p), POINTER(c_char_p)]
+    library.LLVMAssemblyParseFileInContext.restype = bool
+
+    library.LLVMAssemblyParseMemoryBufferInContext.argtypes = [Context,
+            MemoryBuffer, POINTER(c_object_p), POINTER(c_char_p)]
+    library.LLVMAssemblyParseMemoryBufferInContext.restype = bool
+
+    library.LLVMAssemblyParseStringInContext.argtypes = [Context, c_char_p,
+            POINTER(c_object_p), POINTER(c_char_p)]
+    library.LLVMAssemblyParseStringInContext.restype = bool
 
     library.LLVMDisposeModule.argtypes = [Module]
 
