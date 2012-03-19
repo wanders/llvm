@@ -78,21 +78,92 @@ Here are some examples on how to perform iteration:
 """
 
 from ctypes import c_char_p
+from ctypes import c_char
+from ctypes import c_ubyte
 from ctypes import c_uint64
+from ctypes import c_uint
 
 from .common import CachedProperty
 from .common import LLVMObject
 from .common import c_object_p
 from .common import get_library
+from .common import register_apis
 from .core import MemoryBuffer
+from .enumerations import SymbolFlags
+from .enumerations import SymbolTypes
 
 __all__ = [
     "lib",
     "ObjectFile",
     "Relocation",
     "Section",
+    'SymbolType',
     "Symbol",
 ]
+
+class SymbolType(object):
+    """Represents a Symbol type enumeration."""
+
+    _value_map = {}
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return 'SymbolType.%s' % self.name
+
+    @staticmethod
+    def from_value(value):
+        """Obtain a SymbolType from its numeric value."""
+        result = SymbolType._value_map.get(value, None)
+
+        if result is None:
+            raise ValueError('Unknown SymbolType: %d' % value)
+
+        return result
+
+    @staticmethod
+    def register(name, value):
+        """Registers a SymbolType enumeration."""
+        if value in SymbolType._value_map:
+            raise ValueError('SymbolType value already registered: %d' % value)
+
+        kind = SymbolType(name, value)
+        SymbolType._value_map[value] = kind
+        setattr(SymbolType, name, kind)
+
+class SymbolFlag(object):
+    """Represents a Symbol flag enumeration."""
+
+    _value_map = {}
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return 'SymbolFlag.%s' % self.name
+
+    @staticmethod
+    def from_value(value):
+        """Obtain a SymbolFlag from its numeric value."""
+        result = SymbolFlag._value_map.get(value, None)
+
+        if result is None:
+            raise ValueError('Unknown SymbolFlag: %d' % value)
+
+        return result
+
+    @staticmethod
+    def register(name, value):
+        """Registers a SymbolFlag enumeration."""
+        if value in SymbolFlag._value_map:
+            raise ValueError('SymbolFlag value already registered: %d' % value)
+
+        flag = SymbolFlag(name, value)
+        SymbolFlag._value_map[value] = flag
+        setattr(SymbolFlag, name, flag)
 
 class ObjectFile(LLVMObject):
     """Represents an object/binary file."""
@@ -319,6 +390,47 @@ class Symbol(LLVMObject):
         return lib.LLVMGetSymbolFileOffset(self)
 
     @CachedProperty
+    def flags(self):
+        """The bitwise flags for this symbol.
+
+        The value is a composition of llvm.enumerations.SymbolFlags values.
+        Typically, you don't access this directly. Instead, go through one of
+        the is_* accessors.
+        """
+        if self.expired:
+            raise Exception('Symbol instance has expired.')
+
+        return lib.LLVMGetSymbolFlags(self)
+
+    @property
+    def is_undefined(self):
+        return self.flags & SymbolFlag.Undefined.value
+
+    @property
+    def is_global(self):
+        return self.flags & SymbolFlag.Global.value
+
+    @property
+    def is_weak(self):
+        return self.flags & SymbolFlag.Weak.value
+
+    @property
+    def is_absolute(self):
+        return self.flags & SymbolFlag.Absolute.value
+
+    @property
+    def is_thread_local(self):
+        return self.flags & SymbolFlag.ThreadLocal.value
+
+    @property
+    def is_common(self):
+        return self.flags & SymbolFlag.Common.value
+
+    @property
+    def is_format_specific(self):
+        return self.flags & SymbolFlag.FormatSpecific.value
+
+    @CachedProperty
     def size(self):
         """The size of the symbol, in long bytes."""
         if self.expired:
@@ -341,12 +453,35 @@ class Symbol(LLVMObject):
 
         return Section(sections)
 
+    @CachedProperty
+    def type(self):
+        """Obtain the type of this symbol."""
+        if self.expired:
+            raise Exception('Symbol instance has expired.')
+
+        return SymbolType.from_value(lib.LLVMGetSymbolType(self))
+
+    @CachedProperty
+    def nm_char(self):
+        """Obtain the nm character representation of this symbol.
+
+        The returned character is what the UNIX utility nm would display for
+        this symbol.
+        """
+        if self.expired:
+            raise Exception('Symbol instance has expired.')
+
+        return lib.LLVMGetSymbolNMTypeChar(self)
+
     def cache(self):
         """Cache all cacheable properties."""
         getattr(self, 'name')
         getattr(self, 'address')
         getattr(self, 'file_offset')
+        getattr(self, 'flags')
+        getattr(self, 'nm_char')
         getattr(self, 'size')
+        getattr(self, 'type')
 
     def expire(self):
         """Mark the object as expired to prevent future API accesses.
@@ -519,5 +654,40 @@ def register_library(library):
     library.LLVMGetRelocationValueString.argtypes = [c_object_p]
     library.LLVMGetRelocationValueString.restype = c_char_p
 
+apis = {
+    # ObjectFile accessors.
+    'LLVMObjectFileGetBytesInAddress': (c_ubyte, [ObjectFile]),
+    'LLVMObjectFileGetArchitecture': (c_uint, [ObjectFile]),
+    'LLVMObjectFileGetFileFormatName': (c_char_p, [ObjectFile]),
+
+    # Section accessors.
+    'LLVMGetSectionAlignment': (c_uint64, [c_object_p]),
+    'LLVMSectionIsText': (bool, [c_object_p]),
+    'LLVMSectionIsData': (bool, [c_object_p]),
+    'LLVMSectionIsBSS': (bool, [c_object_p]),
+
+    # Symbol accessors.
+    'LLVMGetSymbolType': (c_uint, [c_object_p]),
+    'LLVMGetSymbolNMTypeChar': (c_char, [c_object_p]),
+    'LLVMGetSymbolFlags': (c_uint, [c_object_p]),
+
+    # Relocation accessors.
+    'LLVMGetRelocationHidden': (bool, [c_object_p]),
+
+    # Needed libraries.
+    'LLVMGetNeededLibraries': (c_object_p, [ObjectFile]),
+    'LLVMDisposeNeededLibraryIterator': (None, [c_object_p]),
+    'LLVMNeededLibraryIteratorAtEnd': (bool, [ObjectFile, c_object_p]),
+    'LLVMMoveToNextNeededLibrary': (None, [c_object_p]),
+    'LLVMGetNeededLibraryPath': (c_char_p, [c_object_p]),
+}
+
 lib = get_library()
 register_library(lib)
+register_apis(apis, lib)
+
+for name, value in SymbolTypes:
+    SymbolType.register(name, value)
+
+for name, value in SymbolFlags:
+    SymbolFlag.register(name, value)

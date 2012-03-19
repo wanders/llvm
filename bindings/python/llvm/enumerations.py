@@ -28,6 +28,8 @@ __all__ = [
     'IntPredicate',
     'RealPredicate',
     'LandingPadClauseTy',
+    'SymbolFlags',
+    'SymbolTypes',
 ]
 
 Attributes = [
@@ -208,4 +210,24 @@ RealPredicate = [
 LandingPadClauseTy = [
     ('Catch', 0),
     ('Filter', 1),
+]
+
+SymbolFlags = [
+    ('None', 0),
+    ('Undefined', 1 << 0),
+    ('Global', 1 << 1),
+    ('Weak', 1 << 2),
+    ('Absolute', 1 << 3),
+    ('ThreadLocal', 1 << 4),
+    ('Common', 1 << 5),
+    ('FormatSpecific', 1 << 31),
+]
+
+SymbolTypes = [
+    ('Unknown', 0),
+    ('Data', 1),
+    ('Debug', 2),
+    ('File', 3),
+    ('Function', 4),
+    ('Other', 5),
 ]
