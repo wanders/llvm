@@ -19,7 +19,7 @@
 
 #ifdef __cplusplus
 
-/* Need these includes to support the LLVM 'cast' template for the C++ 'wrap' 
+/* Need these includes to support the LLVM 'cast' template for the C++ 'wrap'
    and 'unwrap' conversion functions. */
 #include "llvm/Module.h"
 #include "llvm/PassRegistry.h"
@@ -351,6 +351,33 @@ typedef enum {
   LLVMLandingPadFilter    /**< A filter clause  */
 } LLVMLandingPadClauseTy;
 
+typedef enum {
+  LLVMArchUnknown,
+  LLVMArchARM,      /** ARM; arm, armv.*, xscale */
+  LLVMArchCellSPU,  /** CellSPU: spu, cellspu */
+  LLVMArchHexagon,  /** Hexagon: hexagon */
+  LLVMArchMIPS,     /** MIPS: mips, mipsallegrex */
+  LLVMArchMIPSEL,   /** MIPSEL: mipsel, mipsallegrexel */
+  LLVMArchMIPS64,   /** MIPS64: mips64 */
+  LLVMArchMIPS64EL, /** MIPS64EL: mips64el */
+  LLVMArchMSP430,   /** MSP430: msp430 */
+  LLVMArchPPC,      /** PPC: powerpc */
+  LLVMArchPPC64,    /** PPC64: powerpc64, ppu */
+  LLVMArchR600,     /** R600: AMD GPUs HD2XXX - HD6XXX */
+  LLVMArchSparc,    /** Sparc: sparc */
+  LLVMArchSparcv9,  /** Sparcv9: Sparcv9 */
+  LLVMArchTCE,      /** TCE (http://tce.cs.tut.fi/): tce */
+  LLVMArchThumb,    /** Thumb: thumb, thumbv.* */
+  LLVMArchX86,      /** X86: i[3-9]86 */
+  LLVMArchX86_64,   /** X86-64: amd64, x86_64 */
+  LLVMArchXCore,    /** XCore: xcore */
+  LLVMArchMBlaze,   /** MBlaze: mblaze */
+  LLVMArchPTX32,    /** PTX: ptx (32-bit) */
+  LLVMArchPTX64,    /** PTX: ptx (64-bit) */
+  LLVMArchLE32,     /** le32: generic little-endian 32-bit CPU (PNaCl / Emscripten) */
+  LLVMArchAMDIL     /** amdil: amd IL */
+} LLVMArchitectureType;
+
 /**
  * @}
  */
@@ -414,6 +441,7 @@ unsigned LLVMGetMDKindID(const char* Name, unsigned SLen);
  * @{
  */
 
+<<<<<<< HEAD
 /**
  * Create a new, empty module in the global context.
  *
@@ -423,6 +451,10 @@ unsigned LLVMGetMDKindID(const char* Name, unsigned SLen);
  * Every invocation should be paired with LLVMDisposeModule() or memory
  * will be leaked.
  */
+=======
+/* Create and destroy modules. */
+/** See llvm::Module::Module. */
+>>>>>>> [llvm-c] Add architecture type enumeration
 LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID);
 
 /**
@@ -576,6 +608,7 @@ LLVMValueRef LLVMGetPreviousFunction(LLVMValueRef Fn);
  * @}
  */
 
+<<<<<<< HEAD
 /**
  * @defgroup LLVMCCoreType Types
  *
@@ -589,6 +622,9 @@ LLVMValueRef LLVMGetPreviousFunction(LLVMValueRef Fn);
  * A Type in the C API corresponds to llvm::Type.
  *
  * Types have the following hierarchy:
+=======
+/* LLVM types conform to the following hierarchy:
+>>>>>>> [llvm-c] Add architecture type enumeration
  *
  *   types:
  *     integer type
@@ -1384,6 +1420,12 @@ long long LLVMConstIntGetSExtValue(LLVMValueRef ConstantVal);
  */
 LLVMValueRef LLVMConstStringInContext(LLVMContextRef C, const char *Str,
                                       unsigned Length, LLVMBool DontNullTerminate);
+<<<<<<< HEAD
+=======
+LLVMValueRef LLVMConstStructInContext(LLVMContextRef C,
+                                      LLVMValueRef *ConstantVals,
+                                      unsigned Count, LLVMBool Packed);
+>>>>>>> [llvm-c] Add architecture type enumeration
 
 /**
  * Create a ConstantDataSequential with string content in the global context.
@@ -2602,7 +2644,7 @@ void LLVMDisposePassManager(LLVMPassManagerRef PM);
 namespace llvm {
   class MemoryBuffer;
   class PassManagerBase;
-  
+
   #define DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ty, ref)   \
     inline ty *unwrap(ref P) {                          \
       return reinterpret_cast<ty*>(P);                  \
@@ -2611,7 +2653,7 @@ namespace llvm {
     inline ref wrap(const ty *P) {                      \
       return reinterpret_cast<ref>(const_cast<ty*>(P)); \
     }
-  
+
   #define DEFINE_ISA_CONVERSION_FUNCTIONS(ty, ref)  \
     DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ty, ref)         \
                                                         \
@@ -2619,7 +2661,7 @@ namespace llvm {
     inline T *unwrap(ref P) {                           \
       return cast<T>(unwrap(P));                        \
     }
-  
+
   #define DEFINE_STDCXX_CONVERSION_FUNCTIONS(ty, ref)   \
     DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ty, ref)         \
                                                         \
@@ -2629,7 +2671,7 @@ namespace llvm {
       assert(Q && "Invalid cast!");                     \
       return Q;                                         \
     }
-  
+
   DEFINE_ISA_CONVERSION_FUNCTIONS   (Type,               LLVMTypeRef          )
   DEFINE_ISA_CONVERSION_FUNCTIONS   (Value,              LLVMValueRef         )
   DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Module,             LLVMModuleRef        )
@@ -2646,7 +2688,7 @@ namespace llvm {
   inline Module *unwrap(LLVMModuleProviderRef MP) {
     return reinterpret_cast<Module*>(MP);
   }
-  
+
   #undef DEFINE_STDCXX_CONVERSION_FUNCTIONS
   #undef DEFINE_ISA_CONVERSION_FUNCTIONS
   #undef DEFINE_SIMPLE_CONVERSION_FUNCTIONS
@@ -2656,27 +2698,27 @@ namespace llvm {
   inline LLVMContext **unwrap(LLVMContextRef* Tys) {
     return reinterpret_cast<LLVMContext**>(Tys);
   }
-  
+
   inline LLVMContextRef *wrap(const LLVMContext **Tys) {
     return reinterpret_cast<LLVMContextRef*>(const_cast<LLVMContext**>(Tys));
   }
-  
+
   /* Specialized opaque type conversions.
    */
   inline Type **unwrap(LLVMTypeRef* Tys) {
     return reinterpret_cast<Type**>(Tys);
   }
-  
+
   inline LLVMTypeRef *wrap(Type **Tys) {
     return reinterpret_cast<LLVMTypeRef*>(const_cast<Type**>(Tys));
   }
-  
+
   /* Specialized opaque value conversions.
-   */ 
+   */
   inline Value **unwrap(LLVMValueRef *Vals) {
     return reinterpret_cast<Value**>(Vals);
   }
-  
+
   template<typename T>
   inline T **unwrap(LLVMValueRef *Vals, unsigned Length) {
     #if DEBUG
@@ -2686,7 +2728,7 @@ namespace llvm {
     (void)Length;
     return reinterpret_cast<T**>(Vals);
   }
-  
+
   inline LLVMValueRef *wrap(const Value **Vals) {
     return reinterpret_cast<LLVMValueRef*>(const_cast<Value**>(Vals));
   }
