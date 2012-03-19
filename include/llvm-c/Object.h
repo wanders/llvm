@@ -96,6 +96,28 @@ uint64_t LLVMGetSectionAddress(LLVMSectionIteratorRef SI);
 LLVMBool LLVMGetSectionContainsSymbol(LLVMSectionIteratorRef SI,
                                  LLVMSymbolIteratorRef Sym);
 
+/**
+ * Obtain the alignment of a section as the actual value (not log 2).
+ */
+uint64_t LLVMGetSectionAlignment(LLVMSectionIteratorRef SI);
+
+/**
+ * Whether a section is a text section.
+ */
+LLVMBool LLVMSectionIsText(LLVMSectionIteratorRef SI);
+
+/**
+ * Whether a section is a data section.
+ */
+LLVMBool LLVMSectionIsData(LLVMSectionIteratorRef SI);
+
+/**
+ * Whether a section is a BSS Section.
+ *
+ * BSS sections typically contain statically allocated variables.
+ */
+LLVMBool LLVMSectionIsBSS(LLVMSectionIteratorRef SI);
+
 // Section Relocation iterators
 LLVMRelocationIteratorRef LLVMGetRelocations(LLVMSectionIteratorRef Section);
 void LLVMDisposeRelocationIterator(LLVMRelocationIteratorRef RI);

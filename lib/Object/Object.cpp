@@ -112,6 +112,37 @@ LLVMBool LLVMGetSectionContainsSymbol(LLVMSectionIteratorRef SI,
   return ret;
 }
 
+uint64_t LLVMGetSectionAlignment(LLVMSectionIteratorRef SI) {
+  uint64_t ret;
+  if (error_code ec = (*unwrap(SI))->getAlignment(ret))
+    report_fatal_error(ec.message());
+  return ret;
+}
+
+LLVMBool LLVMSectionIsText(LLVMSectionIteratorRef SI) {
+  bool ret;
+  if (error_code ec = (*unwrap(SI))->isText(ret))
+    report_fatal_error(ec.message());
+
+  return ret;
+}
+
+LLVMBool LLVMSectionIsData(LLVMSectionIteratorRef SI) {
+  bool ret;
+  if (error_code ec = (*unwrap(SI))->isData(ret))
+    report_fatal_error(ec.message());
+
+  return ret;
+}
+
+LLVMBool LLVMSectionIsBSS(LLVMSectionIteratorRef SI) {
+  bool ret;
+  if (error_code ec = (*unwrap(SI))->isBSS(ret))
+    report_fatal_error(ec.message());
+
+  return ret;
+}
+
 // Section Relocation iterators
 LLVMRelocationIteratorRef LLVMGetRelocations(LLVMSectionIteratorRef Section) {
   relocation_iterator SI = (*unwrap(Section))->begin_relocations();
