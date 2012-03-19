@@ -37,6 +37,7 @@ extern "C" {
 
 // Opaque type wrappers
 typedef struct LLVMOpaqueObjectFile *LLVMObjectFileRef;
+typedef struct LLVMOpaqueNeededLibraryIterator *LLVMNeededLibraryIteratorRef;
 typedef struct LLVMOpaqueSectionIterator *LLVMSectionIteratorRef;
 typedef struct LLVMOpaqueSymbolIterator *LLVMSymbolIteratorRef;
 typedef struct LLVMOpaqueRelocationIterator *LLVMRelocationIteratorRef;
@@ -93,6 +94,34 @@ uint64_t LLVMGetRelocationType(LLVMRelocationIteratorRef RI);
 const char *LLVMGetRelocationTypeName(LLVMRelocationIteratorRef RI);
 const char *LLVMGetRelocationValueString(LLVMRelocationIteratorRef RI);
 
+// Library iterators.
+
+/**
+ * Obtain an iterator over libraries required by this ObjectFile.
+ */
+LLVMNeededLibraryIteratorRef
+  LLVMGetNeededLibraries(LLVMObjectFileRef ObjectFile);
+
+void LLVMDisposeNeededLibraryIterator(LLVMNeededLibraryIteratorRef NLI);
+
+/**
+ * Determine whether a needed library iterator is at the end of the list.
+ */
+LLVMBool LLVMNeededLibraryIteratorAtEnd(LLVMObjectFileRef ObjectFile,
+                                        LLVMNeededLibraryIteratorRef NLI);
+
+/**
+ * Advance the needed library iterator to the next element.
+ */
+void LLVMMoveToNextNeededLibrary(LLVMNeededLibraryIteratorRef NLI);
+
+// Library accessors.
+
+/**
+ * Obtain the path of the needed library.
+ */
+const char * LLVMGetNeededLibraryPath(LLVMNeededLibraryIteratorRef NLI);
+
 /**
  * @}
  */
@@ -140,6 +169,14 @@ namespace llvm {
         (const_cast<relocation_iterator*>(SI));
     }
 
+    inline LLVMNeededLibraryIteratorRef wrap(const library_iterator *LI) {
+      return reinterpret_cast<LLVMNeededLibraryIteratorRef>
+        (const_cast<library_iterator *>(LI));
+    }
+
+    inline library_iterator *unwrap(LLVMNeededLibraryIteratorRef NLI) {
+      return reinterpret_cast<library_iterator*>(NLI);
+    }
   }
 }
 

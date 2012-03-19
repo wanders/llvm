@@ -216,3 +216,31 @@ const char *LLVMGetRelocationValueString(LLVMRelocationIteratorRef RI) {
   return str;
 }
 
+LLVMNeededLibraryIteratorRef LLVMGetNeededLibraries(
+  LLVMObjectFileRef ObjectFile) {
+  library_iterator LI = unwrap(ObjectFile)->begin_libraries_needed();
+  return wrap(new library_iterator(LI));
+}
+
+void LLVMDisposeNeededLibraryIterator(LLVMNeededLibraryIteratorRef NLI) {
+  delete unwrap(NLI);
+}
+
+LLVMBool LLVMNeededLibraryIteratorAtEnd(LLVMObjectFileRef ObjectFile,
+                                        LLVMNeededLibraryIteratorRef NLI) {
+  return (*unwrap(NLI) == unwrap(ObjectFile)->end_libraries_needed()) ? 1 : 0;
+}
+
+void LLVMMoveToNextNeededLibrary(LLVMNeededLibraryIteratorRef NLI) {
+  error_code ec;
+  unwrap(NLI)->increment(ec);
+  if (ec) report_fatal_error("LLVMMoveToNextNeededLibrary failed: " +
+                             ec.message());
+}
+
+const char * LLVMGetNeededLibraryPath(LLVMNeededLibraryIteratorRef NLI) {
+  StringRef ret;
+  if (error_code ec = (*unwrap(NLI))->getPath(ret))
+    report_fatal_error(ec.message());
+  return ret.data();
+}
