@@ -72,6 +72,39 @@ typedef struct LLVMOpaqueRelocationIterator *LLVMRelocationIteratorRef;
 LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf);
 void LLVMDisposeObjectFile(LLVMObjectFileRef ObjectFile);
 
+// ObjectFile accessors.
+
+/**
+ * Obtain the number of bytes used to represent an address in this object file.
+ */
+uint8_t LLVMObjectFileGetBytesInAddress(LLVMObjectFileRef OF);
+
+/**
+ * Obtain the architecture for an ObjectFile.
+ */
+LLVMArchitectureType LLVMObjectFileGetArchitecture(LLVMObjectFileRef OF);
+
+/**
+ * Returns the name from which this object should be loaded at runtime.
+ *
+ * This is only valid on shared objects. This corresponds to DT_SONAME on
+ * ELF and LC_ID_DYLIB (install name) on MachO.
+ *
+ * The returned string is owned by the function and doesn't need to be freed
+ * by the caller. The lifetime of the returned string is that of the underlying
+ * ObjectFile.
+ */
+const char * LLVMObjectFileGetLoadName(LLVMObjectFileRef OF);
+
+/**
+ * Obtain a string representation of the object file format.
+ *
+ * The returned string is owned by the function and doesn't need to be freed by
+ * the caller. The lifetime of the returned string is that of the underlying
+ * ObjectFile.
+ */
+const char * LLVMObjectFileGetFileFormatName(LLVMObjectFileRef OF);
+
 // ObjectFile Section iterators
 LLVMSectionIteratorRef LLVMGetSections(LLVMObjectFileRef ObjectFile);
 void LLVMDisposeSectionIterator(LLVMSectionIteratorRef SI);

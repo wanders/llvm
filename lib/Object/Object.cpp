@@ -27,6 +27,22 @@ void LLVMDisposeObjectFile(LLVMObjectFileRef ObjectFile) {
   delete unwrap(ObjectFile);
 }
 
+uint8_t LLVMObjectFileGetBytesInAddress(LLVMObjectFileRef OF) {
+  return unwrap(OF)->getBytesInAddress();
+}
+
+LLVMArchitectureType LLVMObjectFileGetArchitecture(LLVMObjectFileRef OF) {
+  return (LLVMArchitectureType)unwrap(OF)->getArch();
+}
+
+const char * LLVMObjectFileGetLoadName(LLVMObjectFileRef OF) {
+  return unwrap(OF)->getLoadName().data();
+}
+
+const char * LLVMObjectFileGetFileFormatName(LLVMObjectFileRef OF) {
+  return unwrap(OF)->getFileFormatName().data();
+}
+
 // ObjectFile Section iterators
 LLVMSectionIteratorRef LLVMGetSections(LLVMObjectFileRef ObjectFile) {
   section_iterator SI = unwrap(ObjectFile)->begin_sections();
