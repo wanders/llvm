@@ -42,3 +42,8 @@ class TestModule(TestBase):
         filename = self.get_resource_filename('helloworld.ll')
         mb = MemoryBuffer(filename=filename)
         Module(assembly_buffer=mb)
+
+    def test_verify_success(self):
+        filename = self.get_resource_filename('helloworld.ll')
+        m = Module(assembly_filename=filename)
+        m.verify()

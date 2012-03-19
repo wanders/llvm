@@ -293,6 +293,19 @@ class Module(LLVMObject):
 
         lib.LLVMDeletionFunction(value)
 
+    def verify(self):
+        """Verifies the IR in this Module.
+
+        Calling this verifies that the IR in the module is proper. It is
+        equivalent to running the "verify" pass on the module.
+
+        If verification fails, an exception is raised. If verification
+        succeeds, nothing happens.
+        """
+        msg = c_char_p()
+        if lib.LLVMVerifyModule(self, 0x02, byref(msg)):
+            raise Exception('Module verification failed: %s' % msg.value)
+
     def write(self, filename=None, fh=None):
         """Write the module bit code.
         This can be used to write the contents of the module to a file or to an
@@ -383,6 +396,9 @@ def register_library(library):
     library.LLVMSetDataLayout.argtypes = [Module, c_char_p]
 
     library.LLVMSetTarget.argtypes = [Module, c_char_p]
+
+    library.LLVMVerifyModule.argtypes = [Module, c_uint, POINTER(c_char_p)]
+    library.LLVMVerifyModule.restype = bool
 
     library.LLVMWriteBitcodeToFD.argtypes = [Module, c_int, c_int, c_int]
     library.LLVMWriteBitcodeToFD.restype = c_int
