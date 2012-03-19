@@ -159,6 +159,13 @@ uint64_t LLVMGetRelocationType(LLVMRelocationIteratorRef RI);
 const char *LLVMGetRelocationTypeName(LLVMRelocationIteratorRef RI);
 const char *LLVMGetRelocationValueString(LLVMRelocationIteratorRef RI);
 
+/**
+ * Determine whether a relocation should be hidden when listing relocations.
+ *
+ * @see llvm::object::RelocationRef::getHidden().
+ */
+LLVMBool LLVMGetRelocationHidden(LLVMRelocationIteratorRef RI);
+
 // Library iterators.
 
 /**

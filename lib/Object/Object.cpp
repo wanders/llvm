@@ -271,6 +271,14 @@ const char *LLVMGetRelocationValueString(LLVMRelocationIteratorRef RI) {
   return str;
 }
 
+LLVMBool LLVMGetRelocationHidden(LLVMRelocationIteratorRef RI) {
+  bool ret;
+  if (error_code ec = (*unwrap(RI))->getHidden(ret))
+    report_fatal_error(ec.message());
+
+  return ret;
+}
+
 LLVMNeededLibraryIteratorRef LLVMGetNeededLibraries(
   LLVMObjectFileRef ObjectFile) {
   library_iterator LI = unwrap(ObjectFile)->begin_libraries_needed();
