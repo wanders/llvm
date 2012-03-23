@@ -85,7 +85,7 @@ from .common import CachedProperty
 from .common import LLVMObject
 from .common import c_object_p
 from .common import get_library
-from .core import MemoryBuffer
+from .core.memorybuffer import MemoryBuffer
 
 from ctypes import string_at
 

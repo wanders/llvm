@@ -1,9 +1,9 @@
 from .base import TestBase
-from ..core import OpCode
-from ..core import MemoryBuffer
-from ..core import PassRegistry
-from ..core import Context
-from ..core import Module
+from llvm.core import OpCode
+from llvm.core.memorybuffer import MemoryBuffer
+from llvm.core import PassRegistry
+from llvm.core import Context
+from llvm.core import Module
 
 class TestCore(TestBase):
     def test_opcode(self):
