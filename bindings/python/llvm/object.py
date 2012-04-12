@@ -120,8 +120,11 @@ class ObjectFile(LLVMObject):
             raise Exception('No input found.')
 
         ptr = lib.LLVMCreateObjectFile(contents)
-        LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeObjectFile)
+        LLVMObject.__init__(self, ptr)
         self.take_ownership(contents)
+
+    def __dispose__(self):
+        lib.LLVMDisposeObjectFile(self)
 
     def get_sections(self, cache=False):
         """Obtain the sections in this object file.

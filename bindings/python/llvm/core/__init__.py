@@ -64,7 +64,10 @@ class Module(LLVMObject):
     """Represents the top-level structure of an llvm program in an opaque object."""
 
     def __init__(self, module, name=None, context=None):
-        LLVMObject.__init__(self, module, disposer=lib.LLVMDisposeModule)
+        LLVMObject.__init__(self, module)
+
+    def __dispose__(self):
+        lib.LLVMDisposeModule(self)
 
     @classmethod
     def CreateWithName(cls, module_id):
@@ -313,13 +316,19 @@ class Context(LLVMObject):
     def __init__(self, context=None):
         if context is None:
             context = lib.LLVMContextCreate()
-            LLVMObject.__init__(self, context, disposer=lib.LLVMContextDispose)
+            LLVMObject.__init__(self, context)
         else:
             LLVMObject.__init__(self, context)
 
+    def __dispose__(self):
+        #lib.LLVMContextDispose(self)
+        pass
+
     @classmethod
     def GetGlobalContext(cls):
-        return Context(lib.LLVMGetGlobalContext())
+        c = Context(lib.LLVMGetGlobalContext())
+        c._self_owned = False
+        return c
 
 @lib.c_name("LLVMPassRegistryRef")
 class PassRegistry(LLVMObject):

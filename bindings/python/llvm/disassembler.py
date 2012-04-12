@@ -53,7 +53,10 @@ class Disassembler(LLVMObject):
             raise Exception('Could not obtain disassembler for triple: %s' %
                             triple)
 
-        LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisasmDispose)
+        LLVMObject.__init__(self, ptr)
+
+    def __dispose__(self):
+        lib.LLVMDisasmDispose(self)
 
     def get_instruction(self, source, pc=0):
         """Obtain the next instruction from an input source.

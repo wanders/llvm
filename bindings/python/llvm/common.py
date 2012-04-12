@@ -32,16 +32,18 @@ class LLVMObject(object):
 
     This class should never be instantiated outside of this package.
     """
-    def __init__(self, ptr, ownable=True, disposer=None):
+    def __init__(self, ptr, ownable=True):
         assert isinstance(ptr, c_object_p)
 
         self._ptr = self._as_parameter_ = ptr
 
         self._self_owned = True
         self._ownable = ownable
-        self._disposer = disposer
 
         self._owned_objects = []
+
+    def __dispose__(self):
+        pass
 
     def take_ownership(self, obj):
         """Take ownership of another object.
@@ -64,11 +66,11 @@ class LLVMObject(object):
         return self._as_parameter_
 
     def __del__(self):
-        if not hasattr(self, '_self_owned') or not hasattr(self, '_disposer'):
+        if not hasattr(self, '_self_owned'):
             return
 
-        if self._self_owned and self._disposer:
-            self._disposer(self)
+        if self._self_owned:
+            self.__dispose__()
 
 class LLVMEnum(int):
     """

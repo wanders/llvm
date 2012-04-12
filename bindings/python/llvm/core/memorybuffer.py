@@ -38,7 +38,10 @@ class MemoryBuffer(LLVMObject):
         if result:
             raise Exception("Could not create memory buffer: %s" % out.value)
 
-        LLVMObject.__init__(self, memory, disposer=lib.LLVMDisposeMemoryBuffer)
+        LLVMObject.__init__(self, memory)
+
+    def __dispose__(self):
+        lib.LLVMDisposeMemoryBuffer(self)
 
     def __len__(self):
         return lib.LLVMGetBufferSize(self)
