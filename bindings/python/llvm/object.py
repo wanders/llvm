@@ -77,14 +77,13 @@ Here are some examples on how to perform iteration:
 
 """
 
-from ctypes import c_char_p
-from ctypes import c_uint64
-
 from .common import CachedProperty
 from .common import LLVMObject
 from .common import c_object_p
 from .common import get_library
 from .core import MemoryBuffer
+
+from ctypes import string_at
 
 __all__ = [
     "lib",
@@ -94,6 +93,9 @@ __all__ = [
     "Symbol",
 ]
 
+lib = get_library()
+
+@lib.c_name("LLVMObjectFileRef")
 class ObjectFile(LLVMObject):
     """Represents an object/binary file."""
 
@@ -196,7 +198,7 @@ class Section(LLVMObject):
         if self.expired:
             raise Exception('Section instance has expired.')
 
-        return lib.LLVMGetSectionName(self)
+        return string_at(lib.LLVMGetSectionName(self))
 
     @CachedProperty
     def size(self):
@@ -211,7 +213,7 @@ class Section(LLVMObject):
         if self.expired:
             raise Exception('Section instance has expired.')
 
-        return lib.LLVMGetSectionContents(self)
+        return string_at(lib.LLVMGetSectionContents(self), self.size)
 
     @CachedProperty
     def address(self):
@@ -300,7 +302,7 @@ class Symbol(LLVMObject):
         if self.expired:
             raise Exception('Symbol instance has expired.')
 
-        return lib.LLVMGetSymbolName(self)
+        return string_at(lib.LLVMGetSymbolName(self))
 
     @CachedProperty
     def address(self):
@@ -411,14 +413,14 @@ class Relocation(LLVMObject):
         if self.expired:
             raise Exception('Relocation instance has expired.')
 
-        return lib.LLVMGetRelocationTypeName(self)
+        return string_at(lib.LLVMGetRelocationTypeName(self))
 
     @CachedProperty
     def value_string(self):
         if self.expired:
             raise Exception('Relocation instance has expired.')
 
-        return lib.LLVMGetRelocationValueString(self)
+        return string_at(lib.LLVMGetRelocationValueString(self))
 
     def expire(self):
         """Expire this instance, making future API accesses fail."""
@@ -433,91 +435,7 @@ class Relocation(LLVMObject):
         getattr(self, 'type_name')
         getattr(self, 'value_string')
 
-def register_library(library):
-    """Register function prototypes with LLVM library instance."""
+lib.c_name("LLVMSectionIteratorRef")(c_object_p)
+lib.c_name("LLVMSymbolIteratorRef")(c_object_p)
+lib.c_name("LLVMRelocationIteratorRef")(c_object_p)
 
-    # Object.h functions
-    library.LLVMCreateObjectFile.argtypes = [MemoryBuffer]
-    library.LLVMCreateObjectFile.restype = c_object_p
-
-    library.LLVMDisposeObjectFile.argtypes = [ObjectFile]
-
-    library.LLVMGetSections.argtypes = [ObjectFile]
-    library.LLVMGetSections.restype = c_object_p
-
-    library.LLVMDisposeSectionIterator.argtypes = [c_object_p]
-
-    library.LLVMIsSectionIteratorAtEnd.argtypes = [ObjectFile, c_object_p]
-    library.LLVMIsSectionIteratorAtEnd.restype = bool
-
-    library.LLVMMoveToNextSection.argtypes = [c_object_p]
-
-    library.LLVMMoveToContainingSection.argtypes = [c_object_p, c_object_p]
-
-    library.LLVMGetSymbols.argtypes = [ObjectFile]
-    library.LLVMGetSymbols.restype = c_object_p
-
-    library.LLVMDisposeSymbolIterator.argtypes = [c_object_p]
-
-    library.LLVMIsSymbolIteratorAtEnd.argtypes = [ObjectFile, c_object_p]
-    library.LLVMIsSymbolIteratorAtEnd.restype = bool
-
-    library.LLVMMoveToNextSymbol.argtypes = [c_object_p]
-
-    library.LLVMGetSectionName.argtypes = [c_object_p]
-    library.LLVMGetSectionName.restype = c_char_p
-
-    library.LLVMGetSectionSize.argtypes = [c_object_p]
-    library.LLVMGetSectionSize.restype = c_uint64
-
-    library.LLVMGetSectionContents.argtypes = [c_object_p]
-    library.LLVMGetSectionContents.restype = c_char_p
-
-    library.LLVMGetSectionAddress.argtypes = [c_object_p]
-    library.LLVMGetSectionAddress.restype = c_uint64
-
-    library.LLVMGetSectionContainsSymbol.argtypes = [c_object_p, c_object_p]
-    library.LLVMGetSectionContainsSymbol.restype = bool
-
-    library.LLVMGetRelocations.argtypes = [c_object_p]
-    library.LLVMGetRelocations.restype = c_object_p
-
-    library.LLVMDisposeRelocationIterator.argtypes = [c_object_p]
-
-    library.LLVMIsRelocationIteratorAtEnd.argtypes = [c_object_p, c_object_p]
-    library.LLVMIsRelocationIteratorAtEnd.restype = bool
-
-    library.LLVMMoveToNextRelocation.argtypes = [c_object_p]
-
-    library.LLVMGetSymbolName.argtypes = [Symbol]
-    library.LLVMGetSymbolName.restype = c_char_p
-
-    library.LLVMGetSymbolAddress.argtypes = [Symbol]
-    library.LLVMGetSymbolAddress.restype = c_uint64
-
-    library.LLVMGetSymbolFileOffset.argtypes = [Symbol]
-    library.LLVMGetSymbolFileOffset.restype = c_uint64
-
-    library.LLVMGetSymbolSize.argtypes = [Symbol]
-    library.LLVMGetSymbolSize.restype = c_uint64
-
-    library.LLVMGetRelocationAddress.argtypes = [c_object_p]
-    library.LLVMGetRelocationAddress.restype = c_uint64
-
-    library.LLVMGetRelocationOffset.argtypes = [c_object_p]
-    library.LLVMGetRelocationOffset.restype = c_uint64
-
-    library.LLVMGetRelocationSymbol.argtypes = [c_object_p]
-    library.LLVMGetRelocationSymbol.restype = c_object_p
-
-    library.LLVMGetRelocationType.argtypes = [c_object_p]
-    library.LLVMGetRelocationType.restype = c_uint64
-
-    library.LLVMGetRelocationTypeName.argtypes = [c_object_p]
-    library.LLVMGetRelocationTypeName.restype = c_char_p
-
-    library.LLVMGetRelocationValueString.argtypes = [c_object_p]
-    library.LLVMGetRelocationValueString.restype = c_char_p
-
-lib = get_library()
-register_library(lib)

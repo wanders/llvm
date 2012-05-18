@@ -8,15 +8,14 @@
 #===------------------------------------------------------------------------===#
 
 from .common import LLVMObject
+from .common import LLVMEnum
 from .common import c_object_p
 from .common import get_library
 
-from . import enumerations
-
-from ctypes import POINTER
 from ctypes import byref
 from ctypes import c_char_p
 from ctypes import c_uint
+from ctypes import string_at
 
 __all__ = [
     "lib",
@@ -33,42 +32,12 @@ __all__ = [
 
 lib = get_library()
 
-class OpCode(object):
+
+@lib.c_enum("LLVMOpcode", "LLVM", "")
+class OpCode(LLVMEnum):
     """Represents an individual OpCode enumeration."""
 
-    _value_map = {}
-
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
-
-    def __repr__(self):
-        return 'OpCode.%s' % self.name
-
-    @staticmethod
-    def from_value(value):
-        """Obtain an OpCode instance from a numeric value."""
-        result = OpCode._value_map.get(value, None)
-
-        if result is None:
-            raise ValueError('Unknown OpCode: %d' % value)
-
-        return result
-
-    @staticmethod
-    def register(name, value):
-        """Registers a new OpCode enumeration.
-
-        This is called by this module for each enumeration defined in
-        enumerations. You should not need to call this outside this module.
-        """
-        if value in OpCode._value_map:
-            raise ValueError('OpCode value already registered: %d' % value)
-
-        opcode = OpCode(name, value)
-        OpCode._value_map[value] = opcode
-        setattr(OpCode, name, opcode)
-
+@lib.c_name("LLVMMemoryBufferRef")
 class MemoryBuffer(LLVMObject):
     """Represents an opaque memory buffer."""
 
@@ -95,6 +64,7 @@ class MemoryBuffer(LLVMObject):
     def __len__(self):
         return lib.LLVMGetBufferSize(self)
 
+@lib.c_name("LLVMValueRef")
 class Value(LLVMObject):
     
     def __init__(self, value):
@@ -102,7 +72,7 @@ class Value(LLVMObject):
 
     @property
     def name(self):
-        return lib.LLVMGetValueName(self)
+        return string_at(lib.LLVMGetValueName(self))
 
     def dump(self):
         lib.LLVMDumpValue(self)
@@ -116,6 +86,7 @@ class Value(LLVMObject):
     def __len__(self):
         return lib.LLVMGetNumOperands(self)
 
+@lib.c_name("LLVMModuleRef")
 class Module(LLVMObject):
     """Represents the top-level structure of an llvm program in an opaque object."""
 
@@ -128,9 +99,29 @@ class Module(LLVMObject):
         c = Context.GetGlobalContext().take_ownership(m)
         return m
 
+    @staticmethod
+    def from_bitcode_buffer(contents, context=None):
+        """
+        Create a new module by reading bitcode from the specified memorybuffer.
+
+        Args:
+            - contents (:class:`llvm.core.memorybuffer.MemoryBuffer`): Memorybuffer to read bitcode from.
+            - context (:class:`llvm.core.context.Context`): Context to create module in, defaults to the global context.
+        """
+        if context is None:
+            context = Context.GetGlobalContext()
+        ptr = c_object_p()
+        err = c_char_p()
+        r = lib.LLVMParseBitcodeInContext(context, contents, byref(ptr), byref(err))
+        if r:
+            raise ValueError("Error loading bitcode: %s" % err.value)
+        m = Module(module=ptr)
+        m.take_ownership(contents)
+        return m
+
     @property
     def datalayout(self):
-        return lib.LLVMGetDataLayout(self)
+        return string_at(lib.LLVMGetDataLayout(self))
 
     @datalayout.setter
     def datalayout(self, new_data_layout):
@@ -139,7 +130,7 @@ class Module(LLVMObject):
 
     @property
     def target(self):
-        return lib.LLVMGetTarget(self)
+        return string_at(lib.LLVMGetTarget(self))
 
     @target.setter
     def target(self, new_target):
@@ -248,6 +239,7 @@ class Function(Value):
     def __len__(self):
         return lib.LLVMCountBasicBlocks(self)
 
+@lib.c_name("LLVMBasicBlockRef")
 class BasicBlock(LLVMObject):
     
     def __init__(self, value):
@@ -278,7 +270,7 @@ class BasicBlock(LLVMObject):
     
     @property
     def name(self):
-        return lib.LLVMGetValueName(self.__as_value())
+        return string_at(lib.LLVMGetValueName(self.__as_value()))
 
     def dump(self):
         lib.LLVMDumpValue(self.__as_value())
@@ -340,8 +332,9 @@ class Instruction(Value):
 
     @property
     def opcode(self):
-        return OpCode.from_value(lib.LLVMGetInstructionOpcode(self))
+        return OpCode(lib.LLVMGetInstructionOpcode(self))
 
+@lib.c_name("LLVMContextRef")
 class Context(LLVMObject):
 
     def __init__(self, context=None):
@@ -355,6 +348,7 @@ class Context(LLVMObject):
     def GetGlobalContext(cls):
         return Context(lib.LLVMGetGlobalContext())
 
+@lib.c_name("LLVMPassRegistryRef")
 class PassRegistry(LLVMObject):
     """Represents an opaque pass registry object."""
 
@@ -362,162 +356,6 @@ class PassRegistry(LLVMObject):
         LLVMObject.__init__(self,
                             lib.LLVMGetGlobalPassRegistry())
 
-def register_library(library):
-    # Initialization/Shutdown declarations.
-    library.LLVMInitializeCore.argtypes = [PassRegistry]
-    library.LLVMInitializeCore.restype = None
-
-    library.LLVMInitializeTransformUtils.argtypes = [PassRegistry]
-    library.LLVMInitializeTransformUtils.restype = None
-
-    library.LLVMInitializeScalarOpts.argtypes = [PassRegistry]
-    library.LLVMInitializeScalarOpts.restype = None
-
-    library.LLVMInitializeObjCARCOpts.argtypes = [PassRegistry]
-    library.LLVMInitializeObjCARCOpts.restype = None
-
-    library.LLVMInitializeVectorization.argtypes = [PassRegistry]
-    library.LLVMInitializeVectorization.restype = None
-
-    library.LLVMInitializeInstCombine.argtypes = [PassRegistry]
-    library.LLVMInitializeInstCombine.restype = None
-
-    library.LLVMInitializeIPO.argtypes = [PassRegistry]
-    library.LLVMInitializeIPO.restype = None
-
-    library.LLVMInitializeInstrumentation.argtypes = [PassRegistry]
-    library.LLVMInitializeInstrumentation.restype = None
-
-    library.LLVMInitializeAnalysis.argtypes = [PassRegistry]
-    library.LLVMInitializeAnalysis.restype = None
-
-    library.LLVMInitializeIPA.argtypes = [PassRegistry]
-    library.LLVMInitializeIPA.restype = None
-
-    library.LLVMInitializeCodeGen.argtypes = [PassRegistry]
-    library.LLVMInitializeCodeGen.restype = None
-
-    library.LLVMInitializeTarget.argtypes = [PassRegistry]
-    library.LLVMInitializeTarget.restype = None
-
-    library.LLVMShutdown.argtypes = []
-    library.LLVMShutdown.restype = None
-
-    # Pass Registry declarations.
-    library.LLVMGetGlobalPassRegistry.argtypes = []
-    library.LLVMGetGlobalPassRegistry.restype = c_object_p
-
-    # Context declarations.
-    library.LLVMContextCreate.argtypes = []
-    library.LLVMContextCreate.restype = c_object_p
-
-    library.LLVMContextDispose.argtypes = [Context]
-    library.LLVMContextDispose.restype = None
-
-    library.LLVMGetGlobalContext.argtypes = []
-    library.LLVMGetGlobalContext.restype = c_object_p
-
-    # Memory buffer declarations
-    library.LLVMCreateMemoryBufferWithContentsOfFile.argtypes = [c_char_p,
-            POINTER(c_object_p), POINTER(c_char_p)]
-    library.LLVMCreateMemoryBufferWithContentsOfFile.restype = bool
-
-    library.LLVMGetBufferSize.argtypes = [MemoryBuffer]
-
-    library.LLVMDisposeMemoryBuffer.argtypes = [MemoryBuffer]
-
-    # Module declarations
-    library.LLVMModuleCreateWithName.argtypes = [c_char_p]
-    library.LLVMModuleCreateWithName.restype = c_object_p
-
-    library.LLVMDisposeModule.argtypes = [Module]
-    library.LLVMDisposeModule.restype = None
-
-    library.LLVMGetDataLayout.argtypes = [Module]
-    library.LLVMGetDataLayout.restype = c_char_p
-
-    library.LLVMSetDataLayout.argtypes = [Module, c_char_p]
-    library.LLVMSetDataLayout.restype = None
-
-    library.LLVMGetTarget.argtypes = [Module]
-    library.LLVMGetTarget.restype = c_char_p
-
-    library.LLVMSetTarget.argtypes = [Module, c_char_p]
-    library.LLVMSetTarget.restype = None
-
-    library.LLVMDumpModule.argtypes = [Module]
-    library.LLVMDumpModule.restype = None
-
-    library.LLVMPrintModuleToFile.argtypes = [Module, c_char_p,
-                                              POINTER(c_char_p)]
-    library.LLVMPrintModuleToFile.restype = bool
-
-    library.LLVMGetFirstFunction.argtypes = [Module]
-    library.LLVMGetFirstFunction.restype = c_object_p
-
-    library.LLVMGetLastFunction.argtypes = [Module]
-    library.LLVMGetLastFunction.restype = c_object_p
-
-    library.LLVMGetNextFunction.argtypes = [Function]
-    library.LLVMGetNextFunction.restype = c_object_p
-
-    library.LLVMGetPreviousFunction.argtypes = [Function]
-    library.LLVMGetPreviousFunction.restype = c_object_p
-
-    # Value declarations.
-    library.LLVMGetValueName.argtypes = [Value]
-    library.LLVMGetValueName.restype = c_char_p
-
-    library.LLVMDumpValue.argtypes = [Value]
-    library.LLVMDumpValue.restype = None
-
-    library.LLVMGetOperand.argtypes = [Value, c_uint]
-    library.LLVMGetOperand.restype = c_object_p
-
-    library.LLVMSetOperand.argtypes = [Value, Value, c_uint]
-    library.LLVMSetOperand.restype = None
-
-    library.LLVMGetNumOperands.argtypes = [Value]
-    library.LLVMGetNumOperands.restype = c_uint
-
-    # Basic Block Declarations.
-    library.LLVMGetFirstBasicBlock.argtypes = [Function]
-    library.LLVMGetFirstBasicBlock.restype = c_object_p
-
-    library.LLVMGetLastBasicBlock.argtypes = [Function]
-    library.LLVMGetLastBasicBlock.restype = c_object_p
-
-    library.LLVMGetNextBasicBlock.argtypes = [BasicBlock]
-    library.LLVMGetNextBasicBlock.restype = c_object_p
-
-    library.LLVMGetPreviousBasicBlock.argtypes = [BasicBlock]
-    library.LLVMGetPreviousBasicBlock.restype = c_object_p
-
-    library.LLVMGetFirstInstruction.argtypes = [BasicBlock]
-    library.LLVMGetFirstInstruction.restype = c_object_p
-
-    library.LLVMGetLastInstruction.argtypes = [BasicBlock]
-    library.LLVMGetLastInstruction.restype = c_object_p
-
-    library.LLVMBasicBlockAsValue.argtypes = [BasicBlock]
-    library.LLVMBasicBlockAsValue.restype = c_object_p
-
-    library.LLVMCountBasicBlocks.argtypes = [Function]
-    library.LLVMCountBasicBlocks.restype = c_uint
-
-    # Instruction Declarations.
-    library.LLVMGetNextInstruction.argtypes = [Instruction]
-    library.LLVMGetNextInstruction.restype = c_object_p
-
-    library.LLVMGetPreviousInstruction.argtypes = [Instruction]
-    library.LLVMGetPreviousInstruction.restype = c_object_p
-
-    library.LLVMGetInstructionOpcode.argtypes = [Instruction]
-    library.LLVMGetInstructionOpcode.restype = c_uint
-
-def register_enumerations():
-    for name, value in enumerations.OpCodes:
-        OpCode.register(name, value)
 
 def initialize_llvm():
     c = Context.GetGlobalContext()
@@ -535,6 +373,6 @@ def initialize_llvm():
     lib.LLVMInitializeCodeGen(p)
     lib.LLVMInitializeTarget(p)
 
-register_library(lib)
-register_enumerations()
+
+# hmmm? this means we don't go lazy
 initialize_llvm()

@@ -11,6 +11,8 @@ from ctypes import POINTER
 from ctypes import c_void_p
 from ctypes import cdll
 
+import warnings
+
 import ctypes.util
 import platform
 
@@ -68,6 +70,14 @@ class LLVMObject(object):
         if self._self_owned and self._disposer:
             self._disposer(self)
 
+class LLVMEnum(int):
+    """
+    Base class for enum types. Use combined with lib.c_enum decorator.
+    """
+    def __str__(self):
+        return "%s.%s(%d)" % (self.__class__.__name__, self._names.get(self, "?"), int(self))
+    __repr__ = __str__
+
 class CachedProperty(object):
     """Decorator that caches the result of a property lookup.
 
@@ -91,7 +101,8 @@ class CachedProperty(object):
 
         return value
 
-def get_library():
+
+def load_library():
     """Obtain a reference to the llvm library."""
 
     # On Linux, ctypes.cdll.LoadLibrary() respects LD_LIBRARY_PATH
@@ -124,3 +135,100 @@ def get_library():
         if t:
             return cdll.LoadLibrary(t)
     raise Exception('LLVM shared library not found!')
+
+class OnDemandRegisteredDeclarationsLibrary(object):
+    """
+    Wrapper over a ctypes library.
+
+    Reads declarations from the generated files in `llvm.generated.*`
+    first time a function is called.
+
+    Use the `c_name` and `c_enum` decorators to register types on the lib.
+    """
+
+    BASE = "llvm.generated."
+    MODULES = ('object', 'disassembler', 'core')
+
+    def __init__(self):
+        self.lib = None
+        self.types = {}
+        self.funcs = {}
+        self.defs = {}
+        self.edefs = {}
+        self.types['LLVMBool'] = ctypes.c_int
+
+        for n in self.MODULES:
+            m = __import__(self.BASE+n,
+                           fromlist=['function_declarations',
+                                     'enum_declarations'],
+                           level=0)
+            self.defs.update(m.function_declarations)
+            self.edefs.update(m.enum_declarations)
+
+    def c_name(self, cname):
+        def _(klass):
+            self.types[cname] = klass
+            return klass
+        return _
+
+    def c_enum(self, enumname, stripprefix="", stripsuffix=""):
+        enumdef = self.edefs[enumname]
+        enumdef_stripped = {}
+        for k,v in enumdef.iteritems():
+            assert k.startswith(stripprefix)
+            assert k.endswith(stripsuffix)
+            if stripprefix:
+                k = k[len(stripprefix):]
+            if stripsuffix:
+                k = k[:-len(stripsuffix)]
+            enumdef_stripped[k] = v
+
+        def _(klass):
+            klass._names = dict((v,k) for k,v in enumdef_stripped.iteritems())
+            for k,v in enumdef_stripped.iteritems():
+                setattr(klass, k, klass(v))
+            self.types[enumname] = klass
+            return klass
+        return _
+
+    def __getattr__(self, attr):
+        try:
+            return self.funcs[attr]
+        except KeyError:
+            pass
+
+        if self.lib is None:
+            self.lib = load_library()
+
+        r = getattr(self.lib, attr)
+        self.funcs[attr] = r
+
+        def resolvetype(t):
+            if isinstance(t, basestring):
+                return self.types[t]
+            return t
+
+        if attr in self.defs:
+            rt, at = self.defs[attr]
+            rt = resolvetype(rt)
+            at = map(resolvetype, at)
+
+            r.restype = rt
+            r.argtypes = at
+
+        else:
+            warnings.warn("Function %s called without prototype" % repr(attr),
+                          UserWarning, stacklevel=2)
+
+        return r
+
+_lib = None
+def get_library():
+    """Obtain a reference to the llvm library."""
+    global _lib
+
+    if _lib is not None:
+        return _lib
+
+    _lib = OnDemandRegisteredDeclarationsLibrary()
+    return _lib

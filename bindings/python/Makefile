@@ -15,6 +15,19 @@ all::
 	$(Echo) "Building python bindings (which is currently is a no-op)"
 
 
+GEN_HDRS:=Disassembler.h Object.h Core.h
+
+.PHONY: generate-in-src-dir
+generate-in-src-dir:
+	@for hdr in $(GEN_HDRS); do \
+	echo Generating interface definition for $$hdr...; \
+	PYTHONPATH=$(PROJ_SRC_ROOT)/tools/clang/bindings/python/ \
+	LD_LIBRARY_PATH=$(SharedLibDir) \
+	PROJ_SRC_ROOT=$(PROJ_SRC_ROOT) \
+	python $(PROJ_SRC_DIR)/tools/generate-from-includes.py -std=c11 $(CPP.Flags) -I$(PROJ_SRC_ROOT)/tools/clang/lib/Headers/ $(PROJ_SRC_ROOT)/include/llvm-c/$$hdr >$(PROJ_SRC_DIR)/llvm/generated/`echo $$hdr | tr A-Z/ a-z_ | sed s/.h$$//`.py; \
+	done
+
+
 
 .PHONY: check-py-local
 ifeq ($(NOSETESTS),)

@@ -13,7 +13,6 @@ from ctypes import addressof
 from ctypes import c_byte
 from ctypes import c_char_p
 from ctypes import c_int
-from ctypes import c_size_t
 from ctypes import c_ubyte
 from ctypes import c_uint64
 from ctypes import c_void_p
@@ -48,8 +47,9 @@ class Disassembler(LLVMObject):
         is something like 'i386-apple-darwin9'.
         """
         ptr = lib.LLVMCreateDisasm(c_char_p(triple), c_void_p(None), c_int(0),
-                callbacks['op_info'](0), callbacks['symbol_lookup'](0))
-        if not ptr.contents:
+                                   lib.LLVMCreateDisasm.argtypes[3](0),
+                                   lib.LLVMCreateDisasm.argtypes[4](0))
+        if not ptr:
             raise Exception('Could not obtain disassembler for triple: %s' %
                             triple)
 
@@ -120,25 +120,9 @@ class Disassembler(LLVMObject):
             raise Exception('Unable to set all disassembler options in %i' % options)
 
 
-def register_library(library):
-    library.LLVMCreateDisasm.argtypes = [c_char_p, c_void_p, c_int,
-        callbacks['op_info'], callbacks['symbol_lookup']]
-    library.LLVMCreateDisasm.restype = c_object_p
-
-    library.LLVMDisasmDispose.argtypes = [Disassembler]
-
-    library.LLVMDisasmInstruction.argtypes = [Disassembler, POINTER(c_ubyte),
-            c_uint64, c_uint64, c_char_p, c_size_t]
-    library.LLVMDisasmInstruction.restype = c_size_t
-
-    library.LLVMSetDisasmOptions.argtypes = [Disassembler, c_uint64]
-    library.LLVMSetDisasmOptions.restype = c_int
-
-
-callbacks['op_info'] = CFUNCTYPE(c_int, c_void_p, c_uint64, c_uint64, c_uint64,
-                                 c_int, c_void_p)
-callbacks['symbol_lookup'] = CFUNCTYPE(c_char_p, c_void_p, c_uint64,
-                                       POINTER(c_uint64), c_uint64,
-                                       POINTER(c_char_p))
-
-register_library(lib)
+lib.c_name("LLVMOpInfoCallback")(CFUNCTYPE(c_int, c_void_p, c_uint64, c_uint64, c_uint64,
+                                           c_int, c_void_p))
+lib.c_name("LLVMSymbolLookupCallback")(CFUNCTYPE(c_char_p, c_void_p, c_uint64,
+                                                 POINTER(c_uint64), c_uint64,
+                                                 POINTER(c_char_p)))
+lib.c_name("LLVMDisasmContextRef")(c_object_p)

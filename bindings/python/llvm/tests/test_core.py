@@ -4,17 +4,17 @@ from ..core import MemoryBuffer
 from ..core import PassRegistry
 from ..core import Context
 from ..core import Module
-from ..bit_reader import parse_bitcode
 
 class TestCore(TestBase):
     def test_opcode(self):
         self.assertTrue(hasattr(OpCode, 'Ret'))
         self.assertTrue(isinstance(OpCode.Ret, OpCode))
-        self.assertEqual(OpCode.Ret.value, 1)
+        self.assertEqual(OpCode.Ret, 1)
 
-        op = OpCode.from_value(1)
+        op = OpCode(1)
         self.assertTrue(isinstance(op, OpCode))
         self.assertEqual(op, OpCode.Ret)
+        self.assertEqual(str(op), 'OpCode.Ret(1)')
 
     def test_memory_buffer_create_from_file(self):
         source = self.get_test_file()
@@ -63,7 +63,7 @@ class TestCore(TestBase):
         m.print_module_to_file("test2.ll")
     
     def test_module_function_iteration(self):
-        m = parse_bitcode(MemoryBuffer(filename=self.get_test_bc()))
+        m = Module.from_bitcode_buffer(MemoryBuffer(filename=self.get_test_bc()))
         i = 0
         functions = ["f", "f2", "f3", "f4", "f5", "f6", "g1", "g2", "h1", "h2",
                      "h3"]
@@ -79,7 +79,7 @@ class TestCore(TestBase):
             f.dump()
 
     def test_function_basicblock_iteration(self):
-        m = parse_bitcode(MemoryBuffer(filename=self.get_test_bc()))
+        m = Module.from_bitcode_buffer(MemoryBuffer(filename=self.get_test_bc()))
         i = 0
         
         bb_list = ['b1', 'b2', 'end']
@@ -101,7 +101,7 @@ class TestCore(TestBase):
             bb.dump()
 
     def test_basicblock_instruction_iteration(self):
-        m = parse_bitcode(MemoryBuffer(filename=self.get_test_bc()))
+        m = Module.from_bitcode_buffer(MemoryBuffer(filename=self.get_test_bc()))
         i = 0
         
         inst_list = [('arg1', OpCode.ExtractValue),

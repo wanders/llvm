@@ -4,12 +4,11 @@ from ..core import MemoryBuffer
 from ..core import PassRegistry
 from ..core import Context
 from ..core import Module
-from ..bit_reader import parse_bitcode
 
 class TestBitReader(TestBase):
 
     def test_parse_bitcode(self):
         source = self.get_test_bc()
-        m = parse_bitcode(MemoryBuffer(filename=source))
+        m = Module.from_bitcode_buffer(MemoryBuffer(filename=source))
         print m.target
         print m.datalayout
