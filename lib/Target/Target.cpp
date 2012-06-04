@@ -50,6 +50,49 @@ void LLVMInitializeTarget(LLVMPassRegistryRef R) {
   initializeTarget(*unwrap(R));
 }
 
+void LLVMInitializeAllTargetInfos(void) {
+#define LLVM_TARGET(TargetName) LLVMInitialize##TargetName##TargetInfo();
+#include "llvm/Config/Targets.def"
+}
+
+void LLVMInitializeAllTargets(void) {
+#define LLVM_TARGET(TargetName) LLVMInitialize##TargetName##Target();
+#include "llvm/Config/Targets.def"
+}
+
+void LLVMInitializeAllTargetMCs(void) {
+#define LLVM_TARGET(TargetName) LLVMInitialize##TargetName##TargetMC();
+#include "llvm/Config/Targets.def"
+}
+
+void LLVMInitializeAllAsmPrinters(void) {
+#define LLVM_ASM_PRINTER(TargetName) LLVMInitialize##TargetName##AsmPrinter();
+#include "llvm/Config/AsmPrinters.def"
+}
+
+void LLVMInitializeAllAsmParsers(void) {
+#define LLVM_ASM_PARSER(TargetName) LLVMInitialize##TargetName##AsmParser();
+#include "llvm/Config/AsmParsers.def"
+}
+
+void LLVMInitializeAllDisassemblers(void) {
+#define LLVM_DISASSEMBLER(TargetName) \
+  LLVMInitialize##TargetName##Disassembler();
+#include "llvm/Config/Disassemblers.def"
+}
+
+LLVMBool LLVMInitializeNativeTarget(void) {
+#ifdef LLVM_NATIVE_TARGET
+  LLVM_NATIVE_TARGETINFO();
+  LLVM_NATIVE_TARGET();
+  LLVM_NATIVE_TARGETMC();
+  return 0;
+#else
+  return 1;
+#endif
+}
+
+
 LLVMTargetDataRef LLVMCreateTargetData(const char *StringRep) {
   return wrap(new DataLayout(StringRep));
 }
