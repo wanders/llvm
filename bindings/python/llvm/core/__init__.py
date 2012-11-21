@@ -7,10 +7,10 @@
 #
 #===------------------------------------------------------------------------===#
 
-from .common import LLVMObject
-from .common import LLVMEnum
-from .common import c_object_p
-from .common import get_library
+from ..common import LLVMObject
+from ..common import LLVMEnum
+from ..common import c_object_p
+from ..common import get_library
 
 from ctypes import byref
 from ctypes import c_char_p
