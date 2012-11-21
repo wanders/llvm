@@ -15,19 +15,21 @@ This module provides an interface for reading information from object files
 (e.g. binary executables and libraries).
 
 Using this module, you can obtain information about an object file's sections,
-symbols, and relocations. These are represented by the classes ObjectFile,
-Section, Symbol, and Relocation, respectively.
+symbols, and relocations. These are represented by the classes :class:`ObjectFile`,
+:class:`Section`, :class:`Symbol`, and :class:`Relocation`, respectively.
 
 Usage
 -----
 
-The only way to use this module is to start by creating an ObjectFile. You can
+The only way to use this module is to start by creating an :class:`ObjectFile`. You can
 create an ObjectFile by loading a file (specified by its path) or by creating a
-llvm.core.MemoryBuffer and loading that.
+:class:`llvm.core.MemoryBuffer` and loading that.
 
-Once you have an object file, you can inspect its sections and symbols directly
-by calling get_sections() and get_symbols() respectively. To inspect
-relocations, call get_relocations() on a Section instance.
+Once you have an object file, you can inspect its sections and symbols
+directly by calling :meth:`~ObjectFile.get_sections` and
+:meth:`~ObjectFile.get_symbols` respectively. To inspect
+relocations, call :meth:`~Section.get_relocations` on a
+:class:`Section` instance.
 
 Iterator Interface
 ------------------
@@ -47,6 +49,8 @@ available data. You can call this on each obtained instance. Or, you can pass
 cache=True to the appropriate get_XXX() method to have this done for you.
 
 Here are some examples on how to perform iteration:
+
+.. code-block:: python
 
     obj = ObjectFile(filename='/bin/ls')
 

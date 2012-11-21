@@ -58,18 +58,17 @@ class Disassembler(LLVMObject):
     def get_instruction(self, source, pc=0):
         """Obtain the next instruction from an input source.
 
-        The input source should be a str or bytearray or something that
+        The input `source` should be a str or bytearray or something that
         represents a sequence of bytes.
 
         This function will start reading bytes from the beginning of the
         source.
 
-        The pc argument specifies the address that the first byte is at.
+        The `pc` argument specifies the address that the first byte is at.
 
         This returns a 2-tuple of:
-
-          long number of bytes read. 0 if no instruction was read.
-          str representation of instruction. This will be the assembly that
+          - long number of bytes read. 0 if no instruction was read.
+          - str representation of instruction. This will be the assembly that
             represents the instruction.
         """
         buf = cast(c_char_p(source), POINTER(c_ubyte))
@@ -83,15 +82,17 @@ class Disassembler(LLVMObject):
     def get_instructions(self, source, pc=0):
         """Obtain multiple instructions from an input source.
 
-        This is like get_instruction() except it is a generator for all
-        instructions within the source. It starts at the beginning of the
-        source and reads instructions until no more can be read.
+        This is like :py:meth:`get_instruction` except it is a
+        generator for all instructions within the source.
 
-        This generator returns 3-tuple of:
+        Unless an offset is given in the `pc` argument it starts at
+        the beginning of the source and reads instructions until no
+        more can be read.
 
-          long address of instruction.
-          long size of instruction, in bytes.
-          str representation of instruction.
+        This generator yields 3-tuples of:
+          - long address of instruction.
+          - long size of instruction, in bytes.
+          - str representation of instruction.
         """
         source_bytes = c_char_p(source)
         out_str = cast((c_byte * 255)(), c_char_p)
