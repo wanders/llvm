@@ -1,5 +1,7 @@
 import os.path
 import unittest
+import tempfile
+import sys
 
 POSSIBLE_TEST_BINARIES = [
     'libreadline.so.5',
@@ -36,3 +38,19 @@ class TestBase(unittest.TestCase):
 
     def get_test_bc(self):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "test.bc")
+
+class captured_stderr:
+    def __init__(self):
+        self.prev = None
+
+    def __enter__(self):
+        F = tempfile.NamedTemporaryFile()
+        self.prev = os.dup(sys.stderr.fileno())
+        os.dup2(F.fileno(), sys.stderr.fileno())
+        # hax hax
+        F.__class__.data=property(lambda s: file(s.name).read())
+        return F
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        os.dup2(self.prev, sys.stderr.fileno())
+        os.close(self.prev)

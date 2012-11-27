@@ -12,6 +12,8 @@ from ..common import LLVMObject
 from ..common import get_library
 from ..common import c_object_p
 
+from .context import Context
+
 from ctypes import byref
 from ctypes import c_char_p
 from ctypes import c_uint
@@ -21,12 +23,10 @@ __all__ = [
     "lib",
     "OpCode",
     "MemoryBuffer",
-    "Module",
     "Value",
     "Function",
     "BasicBlock",
     "Instruction",
-    "Context",
     "PassRegistry"
 ]
 
@@ -59,105 +59,105 @@ class Value(LLVMObject):
     def __len__(self):
         return lib.LLVMGetNumOperands(self)
 
-@lib.c_name("LLVMModuleRef")
-class Module(LLVMObject):
-    """Represents the top-level structure of an llvm program in an opaque object."""
+# @lib.c_name("LLVMModuleRef")
+# class Module(LLVMObject):
+#     """Represents the top-level structure of an llvm program in an opaque object."""
 
-    def __init__(self, module, name=None, context=None):
-        LLVMObject.__init__(self, module)
+#     def __init__(self, module, name=None, context=None):
+#         LLVMObject.__init__(self, module)
 
-    def __dispose__(self):
-        lib.LLVMDisposeModule(self)
+#     def __dispose__(self):
+#         lib.LLVMDisposeModule(self)
 
-    @classmethod
-    def CreateWithName(cls, module_id):
-        m = Module(lib.LLVMModuleCreateWithName(module_id))
-        c = Context.GetGlobalContext().take_ownership(m)
-        return m
+#     @classmethod
+#     def CreateWithName(cls, module_id):
+#         m = Module(lib.LLVMModuleCreateWithName(module_id))
+#         c = Context.GetGlobalContext().take_ownership(m)
+#         return m
 
-    @staticmethod
-    def from_bitcode_buffer(contents, context=None):
-        """
-        Create a new module by reading bitcode from the specified memorybuffer.
+#     @staticmethod
+#     def from_bitcode_buffer(contents, context=None):
+#         """
+#         Create a new module by reading bitcode from the specified memorybuffer.
 
-        Args:
-            - contents (:class:`llvm.core.memorybuffer.MemoryBuffer`): Memorybuffer to read bitcode from.
-            - context (:class:`llvm.core.context.Context`): Context to create module in, defaults to the global context.
-        """
-        if context is None:
-            context = Context.GetGlobalContext()
-        ptr = c_object_p()
-        err = c_char_p()
-        r = lib.LLVMParseBitcodeInContext(context, contents, byref(ptr), byref(err))
-        if r:
-            raise ValueError("Error loading bitcode: %s" % err.value)
-        m = Module(module=ptr)
-        m.take_ownership(contents)
-        return m
+#         Args:
+#             - contents (:class:`llvm.core.memorybuffer.MemoryBuffer`): Memorybuffer to read bitcode from.
+#             - context (:class:`llvm.core.context.Context`): Context to create module in, defaults to the global context.
+#         """
+#         if context is None:
+#             context = Context.GetGlobalContext()
+#         ptr = c_object_p()
+#         err = c_char_p()
+#         r = lib.LLVMParseBitcodeInContext(context, contents, byref(ptr), byref(err))
+#         if r:
+#             raise ValueError("Error loading bitcode: %s" % err.value)
+#         m = Module(module=ptr)
+#         m.take_ownership(contents)
+#         return m
 
-    @property
-    def datalayout(self):
-        return string_at(lib.LLVMGetDataLayout(self))
+#     @property
+#     def datalayout(self):
+#         return string_at(lib.LLVMGetDataLayout(self))
 
-    @datalayout.setter
-    def datalayout(self, new_data_layout):
-        """new_data_layout is a string."""
-        lib.LLVMSetDataLayout(self, new_data_layout)
+#     @datalayout.setter
+#     def datalayout(self, new_data_layout):
+#         """new_data_layout is a string."""
+#         lib.LLVMSetDataLayout(self, new_data_layout)
 
-    @property
-    def target(self):
-        return string_at(lib.LLVMGetTarget(self))
+#     @property
+#     def target(self):
+#         return string_at(lib.LLVMGetTarget(self))
 
-    @target.setter
-    def target(self, new_target):
-        """new_target is a string."""
-        lib.LLVMSetTarget(self, new_target)
+#     @target.setter
+#     def target(self, new_target):
+#         """new_target is a string."""
+#         lib.LLVMSetTarget(self, new_target)
 
-    def dump(self):
-        lib.LLVMDumpModule(self)
+#     def dump(self):
+#         lib.LLVMDumpModule(self)
 
-    class __function_iterator(object):
-        def __init__(self, module, reverse=False):
-            self.module = module
-            self.reverse = reverse
-            if self.reverse:
-                self.function = self.module.last
-            else:
-                self.function = self.module.first
+#     class __function_iterator(object):
+#         def __init__(self, module, reverse=False):
+#             self.module = module
+#             self.reverse = reverse
+#             if self.reverse:
+#                 self.function = self.module.last
+#             else:
+#                 self.function = self.module.first
         
-        def __iter__(self):
-            return self
+#         def __iter__(self):
+#             return self
         
-        def next(self):
-            if not isinstance(self.function, Function):
-                raise StopIteration("")
-            result = self.function
-            if self.reverse:
-                self.function = self.function.prev
-            else:
-                self.function = self.function.next
-            return result
+#         def next(self):
+#             if not isinstance(self.function, Function):
+#                 raise StopIteration("")
+#             result = self.function
+#             if self.reverse:
+#                 self.function = self.function.prev
+#             else:
+#                 self.function = self.function.next
+#             return result
     
-    def __iter__(self):
-        return Module.__function_iterator(self)
+#     def __iter__(self):
+#         return Module.__function_iterator(self)
 
-    def __reversed__(self):
-        return Module.__function_iterator(self, reverse=True)
+#     def __reversed__(self):
+#         return Module.__function_iterator(self, reverse=True)
 
-    @property
-    def first(self):
-        return Function(lib.LLVMGetFirstFunction(self))
+#     @property
+#     def first(self):
+#         return Function(lib.LLVMGetFirstFunction(self))
 
-    @property
-    def last(self):
-        return Function(lib.LLVMGetLastFunction(self))
+#     @property
+#     def last(self):
+#         return Function(lib.LLVMGetLastFunction(self))
 
-    def print_module_to_file(self, filename):
-        out = c_char_p(None)
-        # Result is inverted so 0 means everything was ok.
-        result = lib.LLVMPrintModuleToFile(self, filename, byref(out))        
-        if result:
-            raise RuntimeError("LLVM Error: %s" % out.value)
+#     def print_module_to_file(self, filename):
+#         out = c_char_p(None)
+#         # Result is inverted so 0 means everything was ok.
+#         result = lib.LLVMPrintModuleToFile(self, filename, byref(out))        
+#         if result:
+#             raise RuntimeError("LLVM Error: %s" % out.value)
 
 class Function(Value):
 
@@ -309,26 +309,6 @@ class Instruction(Value):
     @property
     def opcode(self):
         return OpCode(lib.LLVMGetInstructionOpcode(self))
-
-@lib.c_name("LLVMContextRef")
-class Context(LLVMObject):
-
-    def __init__(self, context=None):
-        if context is None:
-            context = lib.LLVMContextCreate()
-            LLVMObject.__init__(self, context)
-        else:
-            LLVMObject.__init__(self, context)
-
-    def __dispose__(self):
-        #lib.LLVMContextDispose(self)
-        pass
-
-    @classmethod
-    def GetGlobalContext(cls):
-        c = Context(lib.LLVMGetGlobalContext())
-        c._self_owned = False
-        return c
 
 @lib.c_name("LLVMPassRegistryRef")
 class PassRegistry(LLVMObject):

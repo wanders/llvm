@@ -11,4 +11,5 @@ functionallity exposed in the llvm-c interface.
    llvm.disassembler
    llvm.object
    llvm.core.memorybuffer
+   llvm.core.module
    llvm.core.context

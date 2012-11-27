@@ -13,6 +13,36 @@ from ..common import get_library
 
 lib = get_library()
 
+# @lib.c_name("LLVMContextRef")
+# class Context(LLVMObject):
+#     """LLVM state manager.
+
+# A Context owns and manages the core "global" data of LLVM's core
+# infrastructure, including the type and constant uniquing tables.
+
+# The existence of these objects will most likely be transparent to most
+# consumers of the Python bindings. However, they are exposed for
+# advanced users to use, if needed.
+# """
+
+#     def __init__(self, context=None):
+#         if context is None:
+#             context = lib.LLVMContextCreate()
+#             LLVMObject.__init__(self, context)
+#         else:
+#             LLVMObject.__init__(self, context)
+
+#     def __dispose__(self):
+#         #lib.LLVMContextDispose(self)
+#         pass
+
+#     @classmethod
+#     def GetGlobalContext(cls):
+#         c = Context(lib.LLVMGetGlobalContext())
+#         c._self_owned = False
+#         return c
+
+
 @lib.c_name("LLVMContextRef")
 class Context(LLVMObject):
     """LLVM state manager.
@@ -34,6 +64,10 @@ advanced users to use, if needed.
 
     def __dispose__(self):
         lib.LLVMContextDispose(self)
+
+    @staticmethod
+    def GetGlobalContext():
+        return GlobalContext()
 
 
 g_ctx = None
