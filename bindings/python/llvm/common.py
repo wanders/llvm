@@ -11,6 +11,8 @@ from ctypes import POINTER
 from ctypes import c_void_p
 from ctypes import cdll
 
+from weakref import WeakValueDictionary
+
 import warnings
 
 import ctypes.util
@@ -27,6 +29,9 @@ __all__ = [
 
 c_object_p = POINTER(c_void_p)
 
+def _object_p_to_key(o):
+    return ctypes.cast(o, ctypes.c_void_p).value
+
 class LLVMObject(object):
     """Base class for objects that are backed by an LLVM data structure.
 
@@ -41,6 +46,8 @@ class LLVMObject(object):
         self._ownable = ownable
 
         self._owned_objects = []
+
+        LLVMObject._unaliasing[_object_p_to_key(ptr)] = self
 
     def __dispose__(self):
         pass
@@ -71,6 +78,18 @@ class LLVMObject(object):
 
         if self._self_owned:
             self.__dispose__()
+
+    _unaliasing = WeakValueDictionary()
+    @classmethod
+    def _from_ptr(cls, ptr):
+        if not ptr:
+            return None
+        key = _object_p_to_key(ptr)
+        try:
+            return LLVMObject._unaliasing[key]
+        except KeyError:
+            return cls(ptr=ptr)
+
 
 class LLVMEnum(int):
     """
