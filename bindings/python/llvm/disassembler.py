@@ -32,6 +32,16 @@ callbacks = {}
 # Constants for set_options
 Option_UseMarkup = 1
 
+_inited = False
+def _init_once():
+    global _inited
+    if _inited:
+        return
+    lib.LLVMInitializeAllTargetInfos()
+    lib.LLVMInitializeAllTargetMCs()
+    lib.LLVMInitializeAllDisassemblers()
+    _inited = True
+
 class Disassembler(LLVMObject):
     """Represents a disassembler instance.
 
@@ -46,6 +56,7 @@ class Disassembler(LLVMObject):
         The triple argument is the triple to create the disassembler for. This
         is something like 'i386-apple-darwin9'.
         """
+        _init_once()
         ptr = lib.LLVMCreateDisasm(c_char_p(triple), c_void_p(None), c_int(0),
                                    lib.LLVMCreateDisasm.argtypes[3](0),
                                    lib.LLVMCreateDisasm.argtypes[4](0))
