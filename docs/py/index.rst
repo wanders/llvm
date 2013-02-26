@@ -13,3 +13,4 @@ functionallity exposed in the llvm-c interface.
    llvm.core.memorybuffer
    llvm.core.module
    llvm.core.context
+   llvm.core.types

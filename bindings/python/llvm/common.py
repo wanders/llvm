@@ -32,6 +32,17 @@ c_object_p = POINTER(c_void_p)
 def _object_p_to_key(o):
     return ctypes.cast(o, ctypes.c_void_p).value
 
+def create_c_object_p_array(contents=None, ensure_type=None):
+    if ensure_type is not None:
+        if not all(isinstance(e, ensure_type) for e in contents):
+            raise TypeError("Expected %s in sequence" % ensure_type.__name__)
+    typ = c_object_p * len(contents)
+    return typ(*[e.from_param() for e in contents])
+
+def create_empty_c_object_p_array(size):
+    typ = c_object_p * size
+    return typ()
+
 class LLVMObject(object):
     """Base class for objects that are backed by an LLVM data structure.
 
@@ -95,9 +106,19 @@ class LLVMEnum(int):
     """
     Base class for enum types. Use combined with lib.c_enum decorator.
     """
+    _INCLUDE_NUM = True
+
+    def from_param(self):
+        return self
+
     def __str__(self):
-        return "%s.%s(%d)" % (self.__class__.__name__, self._names.get(self, "?"), int(self))
+        name = "%s.%s" % (self.__class__.__name__, self._names.get(self, "?"))
+        if self._INCLUDE_NUM:
+            return "%s(%d)" % (name, int(self))
+        return name
+
     __repr__ = __str__
+
 
 class CachedProperty(object):
     """Decorator that caches the result of a property lookup.
