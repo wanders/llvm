@@ -18,10 +18,11 @@ from ..common import LLVMEnum
 from ..common import get_library
 from ..common import c_object_p
 
-from llvm.core import Function
+from llvm.core.value import Value
 from .context import Context
 
 from .memorybuffer import MemoryBuffer
+from . import value
 
 lib = get_library()
 
@@ -160,7 +161,7 @@ class Module(LLVMObject):
             return self
         
         def next(self):
-            if not isinstance(self.function, Function):
+            if not isinstance(self.function, value.Function):
                 raise StopIteration("")
             result = self.function
             if self.reverse:
@@ -177,11 +178,11 @@ class Module(LLVMObject):
 
     @property
     def first(self):
-        return Function(lib.LLVMGetFirstFunction(self))
+        return value.Value._create_from_ptr(lib.LLVMGetFirstFunction(self))
 
     @property
     def last(self):
-        return Function(lib.LLVMGetLastFunction(self))
+        return value.Value._create_from_ptr(lib.LLVMGetLastFunction(self))
 
     def print_module_to_file(self, filename):
         out = ctypes.c_char_p(None)
@@ -190,3 +191,32 @@ class Module(LLVMObject):
         if result:
             raise RuntimeError("LLVM Error: %s" % out.value)
 
+    def add_function(self, functype, name):
+        """
+        Add a new function to the module.
+
+        Args:
+            - functype (:class:`llvm.core.types.FunctionType`): Type of the new function.
+            - name (str): Name of the new function.
+
+        Returns:
+            :class:`llvm.core.value.Function` -- the newly created function.
+        """
+        return value.Value._create_from_ptr(lib.LLVMAddFunction(self, name, functype))
+
+    def get_function(self, name):
+        return value.Value._create_from_ptr(lib.LLVMGetNamedFunction(self, name))
+
+    def add_global_variable(self, vartype, name):
+        """
+        Add a new global variable to the module.
+
+        Args:
+            - vartype (:class:`llvm.core.types.Type`): Type of the global variable.
+            - name (str): Name of the global variable
+
+        Returns:
+            :class:`llvm.core.value.GlobalVariable` -- the new global variable.
+
+        """
+        return value.Value._create_from_ptr(lib.LLVMAddGlobal(self, vartype, name))

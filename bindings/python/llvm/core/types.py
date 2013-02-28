@@ -7,6 +7,8 @@
 #
 #===------------------------------------------------------------------------===#
 
+from ctypes import string_at
+
 from ..common import LLVMObject
 from ..common import LLVMEnum
 
@@ -110,7 +112,7 @@ class StructType(Type):
 
     @property
     def name(self):
-        return lib.LLVMGetStructName(self)
+        return string_at(lib.LLVMGetStructName(self))
 
     @property
     def element_types(self):

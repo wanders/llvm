@@ -1,5 +1,6 @@
 from llvm.core.module import Module
 from llvm.core.context import Context
+from llvm.core.types import TypeFactory
 from llvm.core.memorybuffer import MemoryBuffer
 
 
@@ -60,3 +61,8 @@ class TestModuleAttrs(TestBase):
 
         assert 0 == "This should not be reached"
 
+    def test_module_add_gv(self):
+        m = Module("add_gv")
+        tf = TypeFactory()
+        m.add_global_variable(tf.int(), "myglobal")
+        self.assertTrue("@myglobal = external global i32" in m.to_assembly())
