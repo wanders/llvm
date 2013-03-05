@@ -15,3 +15,4 @@ functionallity exposed in the llvm-c interface.
    llvm.core.context
    llvm.core.types
    llvm.core.value
+   llvm.core.builder
