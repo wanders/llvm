@@ -22,7 +22,8 @@ from llvm.core.value import Value
 from .context import Context
 
 from .memorybuffer import MemoryBuffer
-from . import value
+
+import value
 
 lib = get_library()
 

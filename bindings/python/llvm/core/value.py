@@ -9,11 +9,10 @@
 
 from ..common import LLVMObject
 from ..common import LLVMEnum
-from ..common import get_library
 from ..common import get_library, create_c_object_p_array, create_empty_c_object_p_array
 
-import llvm.core.types
-import llvm.core.module
+import types
+import module
 
 from llvm.core import OpCode
 
@@ -27,13 +26,17 @@ class Value(LLVMObject):
     """
     This class is the root class of LLVM's Value class tree,
     corresponding to values in the IR (such as instructions).
+
+    This class and its ancestor classes except :class:`Constant`
+    should NOT be instantiated, instead use the
+    :class:`llvm.core.builder.Builder`.
     """
     @property
     def type(self):
         """
         The type of the value.
         """
-        return llvm.core.types.Type._create_from_ptr(lib.LLVMTypeOf(self))
+        return types.Type._create_from_ptr(lib.LLVMTypeOf(self))
 
     @property
     def name(self):
@@ -135,16 +138,16 @@ class User(Value):
 
 class Constant(User):
     def __init__(self, typ=None, value=None, signextend=False, ptr=None):
-        """
-        Create new constant with specified type and value.
+        """Create new constant with specified type and value.
 
         Args:
             - typ (:class:`llvm.core.types.Type`): The type the new constant should have. (:class:`llvm.core.types.IntType`)
             - value (str or int): The value the new constant should have. Must be `int` for IntType:d constants, and float or string for FloatType:d.
-            - signextend (bool):
+            - signextend (bool): Set to True if the given constant should be signextended.
+            - ptr: For internal use only.
 
         Returns:
-            --
+            - The new constant.
         """
         if ptr is None:
             import types
@@ -165,18 +168,38 @@ class Constant(User):
 
     @staticmethod
     def undef(typ):
+        """Create new constant of specified type and (defined) undefined value.
+
+        Args:
+            - typ (:class:`llvm.core.types.Type`): The type the new constant should have.
+        """
         return Value._create_from_ptr(lib.LLVMGetUndef(typ))
 
     @staticmethod
     def null(typ):
+        """Create new null (all zeros) constant of specified type.
+
+        Args:
+            - typ (:class:`llvm.core.types.Type`): The type the new constant should have.
+        """
         return Value._create_from_ptr(lib.LLVMConstNull(typ))
 
     @staticmethod
     def all_ones(typ):
+        """Create new all ones constant of specified type.
+
+        Args:
+            - typ (:class:`llvm.core.types.Type`): The type the new constant should have.
+        """
         return Value._create_from_ptr(lib.LLVMConstAllOnes(typ))
 
     @staticmethod
     def ptr_null(typ):
+        """Create null pointer of specified type.
+
+        Args:
+            - typ (:class:`llvm.core.types.Type`): The type the new constant should have.
+        """
         return Value._create_from_ptr(lib.LLVMConstPointerNull(typ))
 
 class BlockAddress(Constant):
@@ -210,7 +233,7 @@ class GlobalValue(Constant):
         """
         The module the value belongs to.
         """
-        return llvm.core.module.Module._from_ptr(lib.LLVMGetGlobalParent(self))
+        return module.Module._from_ptr(lib.LLVMGetGlobalParent(self))
 
 
     @property
