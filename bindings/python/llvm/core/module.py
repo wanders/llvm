@@ -120,6 +120,15 @@ class Module(LLVMObject):
         """
         lib.LLVMDumpModule(self)
 
+    def verify(self):
+        """Run sanity check on module.
+        """
+        msg = ctypes.c_char_p()
+        r = lib.LLVMVerifyModule(self, VerifierFailureAction.ReturnStatus, ctypes.byref(msg))
+        if r:
+            raise ValueError(msg.value)
+        return True
+
     def to_assembly(self):
         """Return the IR for this module as a human readable string"""
         tmp = tempfile.NamedTemporaryFile()
@@ -221,3 +230,7 @@ class Module(LLVMObject):
 
         """
         return value.Value._create_from_ptr(lib.LLVMAddGlobal(self, vartype, name))
+
+@lib.c_enum("LLVMVerifierFailureAction", "LLVM", "Action")
+class VerifierFailureAction(LLVMEnum):
+    pass

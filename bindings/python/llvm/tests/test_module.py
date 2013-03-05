@@ -1,7 +1,9 @@
 from llvm.core.module import Module
 from llvm.core.context import Context
 from llvm.core.types import TypeFactory
+from llvm.core.value import Constant
 from llvm.core.memorybuffer import MemoryBuffer
+from llvm.core.builder import Builder
 
 
 from .base import TestBase, captured_stderr
@@ -66,3 +68,17 @@ class TestModuleAttrs(TestBase):
         tf = TypeFactory()
         m.add_global_variable(tf.int(), "myglobal")
         self.assertTrue("@myglobal = external global i32" in m.to_assembly())
+
+    def test_module_verify_broken(self):
+        m = Module("broken_verify")
+        tf = TypeFactory()
+        ft = tf.function(tf.int32(), [])
+        f = m.add_function(ft, "test_module_verify_broken")
+        bb = f.append_basic_block("entry")
+        builder = Builder(bb)
+        builder.ret(Constant(tf.int8(), 10))
+
+        with self.assertRaises(ValueError) as e:
+            m.verify()
+
+        assert e.exception.message.startswith("Function return type does not match operand type of return inst")
