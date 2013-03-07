@@ -46,6 +46,9 @@ class Module(LLVMObject):
             if context is None:
                 context = Context.GetGlobalContext()
 
+            if name is None:
+                raise ValueError("Module must have a name")
+
             ptr = lib.LLVMModuleCreateWithNameInContext(name, context)
 
         LLVMObject.__init__(self, ptr=ptr)
