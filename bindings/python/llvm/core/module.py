@@ -59,7 +59,7 @@ class Module(LLVMObject):
         Create a new module by reading bitcode from the specified memorybuffer.
 
         Args:
-            - path (:class:`llvm.core.memorybuffer.MemoryBuffer`): Path to the file to read bitcode from.
+            - contents (:class:`llvm.core.memorybuffer.MemoryBuffer`): Memorybuffer to read bitcode from.
             - context (:class:`llvm.core.context.Context`): Context to create module in, defaults to the global context.
         """
         if context is None:
