@@ -221,6 +221,11 @@ class ConstantInt(Constant):
     def signed_value(self):
         return lib.LLVMConstIntGetSExtValue(self)
 
+    def __repr__(self):
+        return "<ConstantInt: %d (%d)>" % (self.value, self.signed_value)
+    __str__ = __repr__
+
+
 class ConstantPointerNull(Constant):
     pass
 class ConstantStruct(Constant):

@@ -2,6 +2,9 @@ import os.path
 import unittest
 import tempfile
 import sys
+import subprocess
+
+from llvm.core.module import Module
 
 POSSIBLE_TEST_BINARIES = [
     'libreadline.so.5',
@@ -15,6 +18,8 @@ POSSIBLE_TEST_BINARY_PATHS = [
     '/usr/local/lib',
     '/lib/i386-linux-gnu',
 ]
+
+CLANG = "/home/andersg/dev/llvm/build/Debug+Asserts/bin/clang"  # XXXX
 
 class TestBase(unittest.TestCase):
     def get_test_binary(self):
@@ -38,6 +43,15 @@ class TestBase(unittest.TestCase):
 
     def get_test_bc(self):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "test.bc")
+
+    def clang(self, src):
+        F = tempfile.NamedTemporaryFile()
+        p = subprocess.Popen([CLANG, "-c", "-xc", "-g", "-emit-llvm", "-o", F.name, "-"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        o,e = p.communicate(src)
+        if e:
+            print e
+        return Module.from_bitcode_file(F.name)
+
 
 class captured_stderr:
     def __init__(self):

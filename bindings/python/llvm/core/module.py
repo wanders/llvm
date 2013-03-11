@@ -17,6 +17,7 @@ from ..common import LLVMEnum
 
 from ..common import get_library
 from ..common import c_object_p
+from ..common import create_empty_c_object_p_array
 
 from llvm.core.value import Value
 from .context import Context
@@ -233,6 +234,19 @@ class Module(LLVMObject):
 
         """
         return value.Value._create_from_ptr(lib.LLVMAddGlobal(self, vartype, name))
+
+    def get_metadata_named(self, name):
+        n_op = lib.LLVMGetNamedMetadataNumOperands(self, name)
+        if n_op == 0:
+            raise KeyError("No such named metadata: %s" % name)
+        oparr = create_empty_c_object_p_array(n_op)
+        lib.LLVMGetNamedMetadataOperands(self, name, oparr)
+        return map(value.Value._create_from_ptr, oparr)
+
+    def add_metadata_operand(self, name, value):
+        lib.LLVMAddNamedMetadataOperand(self, name, value)
+
+
 
 @lib.c_enum("LLVMVerifierFailureAction", "LLVM", "Action")
 class VerifierFailureAction(LLVMEnum):
