@@ -60,7 +60,6 @@ instantiated by the user of the Python bindings, instead use the
             def __init__(self):
                 self._as_parameter_ = ptr
 
-        print lib.LLVMGetTypeKind
         kind = lib.LLVMGetTypeKind(DummyType())
         cls = {TypeKind.Void: VoidType,
                TypeKind.Half: HalfType,
