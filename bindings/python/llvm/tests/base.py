@@ -44,9 +44,9 @@ class TestBase(unittest.TestCase):
     def get_test_bc(self):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "test.bc")
 
-    def clang(self, src):
+    def clang(self, src, flags=[]):
         F = tempfile.NamedTemporaryFile()
-        p = subprocess.Popen([CLANG, "-c", "-xc", "-g", "-emit-llvm", "-o", F.name, "-"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen([CLANG, "-c", "-xc", "-emit-llvm", "-o", F.name, "-"] + flags, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         o,e = p.communicate(src)
         if e:
             print e

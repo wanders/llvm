@@ -303,16 +303,21 @@ class DebugLoader:
         try:
             md = m.get_metadata_named("llvm.dbg.cu")
         except KeyError:
-            pass
+            raise ValueError("No llvm.dbg.cu metadata found in module")
         else:
-            cu = MetadataNodeMetaClass.instantiate(md[0])
-            for c in cu.global_variables:
+            self.cu = MetadataNodeMetaClass.instantiate(md[0])
+            for c in self.cu.global_variables:
                 assert c.TAG == Variable.TAG
                 self.items[c.name] = c
-            for c in cu.subprograms:
+            for c in self.cu.subprograms:
                 assert c[0] == SubProgram.TAG
                 v = SubProgram(c)
                 self.items[v.name] = v
+
+    enum_types = property(lambda self: self.cu.enum_types)
+    retained_types = property(lambda self: self.cu.retained_types)
+    subprograms = property(lambda self: self.cu.subprograms)
+    global_variables = property(lambda self: self.cu.global_variables)
 
     def __getitem__(self, nam):
         return self.items[nam]
