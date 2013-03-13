@@ -189,7 +189,7 @@ class OnDemandRegisteredDeclarationsLibrary(object):
     """
 
     BASE = "llvm.generated."
-    MODULES = ('object', 'disassembler', 'core', 'bitreader', 'analysis', 'executionengine', 'transforms_passmanagerbuilder', 'transforms_ipo', 'target')
+    MODULES = ('object', 'disassembler', 'core', 'bitreader', 'analysis', 'executionengine', 'transforms_passmanagerbuilder', 'transforms_ipo', 'target', 'targetmachine')
 
     def __init__(self):
         self.lib = None
