@@ -17,6 +17,7 @@ import warnings
 
 import ctypes.util
 import platform
+import os
 
 # LLVM_VERSION: sync with PACKAGE_VERSION in autoconf/configure.ac and CMakeLists.txt
 #               but leave out the 'svn' suffix.
@@ -274,3 +275,23 @@ def get_library():
 
     _lib = OnDemandRegisteredDeclarationsLibrary()
     return _lib
+
+
+import atexit
+def _dump_non_called_functions():
+    if _lib is not None:
+        uncalled = set()
+        for f in _lib.defs.iterkeys():
+            if f.endswith("InContext"):
+                if f in _lib.funcs or f[:-len("InContext")] in _lib.funcs:
+                    continue
+            else:
+                if f in _lib.funcs or f+"InContext" in _lib.funcs:
+                    continue
+            uncalled.add(f)
+        for f in sorted(uncalled):
+            print " * %s" % f
+        print "%d" % len(uncalled)
+
+if os.getenv("LLVM_PY_DUMP_UNCALLED"):
+    atexit.register(_dump_non_called_functions)
