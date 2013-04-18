@@ -204,6 +204,7 @@ class Module(LLVMObject):
         result = lib.LLVMPrintModuleToFile(self, filename, ctypes.byref(out))        
         if result:
             raise RuntimeError("LLVM Error: %s" % out.value)
+    # functions
 
     def add_function(self, functype, name):
         """
@@ -221,6 +222,8 @@ class Module(LLVMObject):
     def get_function(self, name):
         return value.Value._create_from_ptr(lib.LLVMGetNamedFunction(self, name))
 
+    # global varialables
+
     def add_global_variable(self, vartype, name):
         """
         Add a new global variable to the module.
@@ -234,6 +237,43 @@ class Module(LLVMObject):
 
         """
         return value.Value._create_from_ptr(lib.LLVMAddGlobal(self, vartype, name))
+
+    def get_global_variable_named(self, name):
+        return value.Value._create_from_ptr(lib.LLVMGetNamedGlobal(self, name))
+
+    @property
+    def global_variables(self):
+        """
+        Obtain global variables declared in this module.
+
+        Returns a generator yielding all global variables in this modules.
+        """
+        glb = lib.LLVMGetFirstGlobal(self)
+        while glb:
+            gval = value.Value._create_from_ptr(glb)
+            yield gval
+            glb = lib.LLVMGetNextGlobal(gval)
+
+    # alias
+
+    def add_alias(self, aliasee, name, typ=None):
+        """
+        Add a new alias to the module.
+
+        Args:
+            - aliasee (:class:`llvm.core.value.Value`): The value the new alias is an alias for.
+            - name (str): Name of the new alias.
+            - typ (:class:`llvm.core.types.Type`): Optionally the type of the alias, defaults to the type of the aliasee.
+
+        Returns:
+            :class:`llvm.core.value.GlobalAlias` -- the new alias.
+        """
+        if typ is None:
+            typ = aliasee.type
+        return value.Value._create_from_ptr(lib.LLVMAddAlias(self, typ, aliasee, name))
+
+
+    # metadata
 
     def get_metadata_named(self, name):
         n_op = lib.LLVMGetNamedMetadataNumOperands(self, name)
