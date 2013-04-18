@@ -302,11 +302,23 @@ class Function(GlobalValue):
         lib.LLVMGetParams(self, arr)
         return map(Value._create_from_ptr, arr)
 
-    def append_basic_block(self, name):
-        return ProperBasicBlock._from_ptr(lib.LLVMAppendBasicBlock(self, name))
+    def append_basic_block(self, name, context=None):
+        """
+        Add a new basic block to function.
+
+        Args:
+            - name (str): Name of the new basic block
+            - context (:class:`llvm.core.context.Context`): Context to create basic block in, defaults to the same context as the module that contains the function.
+        """
+        if context is None:
+            context = self.module.context
+        return ProperBasicBlock._from_ptr(lib.LLVMAppendBasicBlockInContext(context, self, name))
 
     @property
     def basic_blocks(self):
+        """
+        Generator yielding all basic blocks in function (:class:`ProperBasicBlock`).
+        """
         f = ProperBasicBlock._from_ptr(lib.LLVMGetFirstBasicBlock(self))
         while f:
             yield f
@@ -314,6 +326,9 @@ class Function(GlobalValue):
 
     @property
     def entry(self):
+        """
+        The entry basic block of function (:class:`ProperBasicBlock`).
+        """
         return ProperBasicBlock._from_ptr(lib.LLVMGetEntryBasicBlock(self))
 
     @property
