@@ -36,7 +36,7 @@ class TestBuilder(TestBase):
         Ti = self.tfact.int()
         Tf = self.tfact.function(Ti, [Ti, Ti])
 
-        self.f = self.m.add_function(Tf, "borken")
+        self.f = self.m.add_function(Tf, "func")
         self.f.args[0].name = "first"
         self.f.args[1].name = "second"
 
@@ -190,13 +190,13 @@ class TestBuilder(TestBase):
         c = self.builder.call(self.f, [self.f.args[1], a], "selfcall")
 
         s = self.m.to_assembly()
-        assert "%selfcall = call i32 @borken(i32 %second, i32 %sum0)" in s
+        assert "%selfcall = call i32 @func(i32 %second, i32 %sum0)" in s
         assert not c.tailcall
 
         c.tailcall = True
 
         s = self.m.to_assembly()
-        assert "%selfcall = tail call i32 @borken(i32 %second, i32 %sum0)" in s
+        assert "%selfcall = tail call i32 @func(i32 %second, i32 %sum0)" in s
         assert c.tailcall
 
     def test_terminator(self):
