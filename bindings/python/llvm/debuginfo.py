@@ -221,12 +221,12 @@ class Variable(Common):
 
 class BaseType(Common):
     TAG = DW_TAG_base_type
-    name = SimpleField(2)
+    name = SimpleField(3)
     bit_size = SimpleField(5)
     bit_alignment = SimpleField(6)
 
 class DerivedType(Common):
-    name = SimpleField(2)
+    name = SimpleField(3)
     parent = InstantiatedField(9)
     bit_size = SimpleField(5)
     bit_alignment = SimpleField(6)
@@ -248,7 +248,7 @@ class RestrictType(DerivedType):
     TAG = DW_TAG_restrict_type
 
 class CompositeType(Common):
-    name = SimpleField(2)
+    name = SimpleField(3)
     parent = InstantiatedField(9)
     members = InstantiatedListField(10)
     bit_size = SimpleField(5)
@@ -291,10 +291,11 @@ class SubProgram(Common):
 class CompileUnit(Common):
     TAG = DW_TAG_compile_unit
     langid = SimpleField(2)
-    enum_types = InstantiatedListField(10)
-    retained_types = InstantiatedListField(11)
-    subprograms = InstantiatedListField(12)
-    global_variables = InstantiatedListField(13)
+    enum_types = InstantiatedListField(7)
+    retained_types = InstantiatedListField(8)
+    subprograms = InstantiatedListField(9)
+    global_variables = InstantiatedListField(10)
+
 
 class DebugLoader:
     def __init__(self, m):
