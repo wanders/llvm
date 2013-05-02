@@ -11,6 +11,8 @@ from ..common import LLVMObject
 from ..common import get_library
 from ..common import get_library, create_c_object_p_array, create_empty_c_object_p_array
 from .value import Value
+from .types import PointerType
+
 
 from ctypes import byref
 
@@ -81,16 +83,26 @@ class Builder(LLVMObject):
 
     # lib.LLVMBuildMalloc.argtypes = [LLVMBuilderRef, LLVMTypeRef, c_char_p]
     # lib.LLVMBuildArrayMalloc.argtypes = [LLVMBuilderRef, LLVMTypeRef, LLVMValueRef, c_char_p]
-    # lib.LLVMBuildAlloca.argtypes = [LLVMBuilderRef, LLVMTypeRef, c_char_p]
     # lib.LLVMBuildArrayAlloca.argtypes = [LLVMBuilderRef, LLVMTypeRef, LLVMValueRef, c_char_p]
     # lib.LLVMBuildFree.argtypes = [LLVMBuilderRef, LLVMValueRef]
+
+    def alloca(self, typ, name=""):
+        return V(lib.LLVMBuildAlloca(self, typ, name))
 
     def load(self, ptr, name=""):
         return V(lib.LLVMBuildLoad(self, ptr, name))
 
-    # lib.LLVMBuildLoad.argtypes = [LLVMBuilderRef, LLVMValueRef, c_char_p]
-    # lib.LLVMBuildStore.argtypes = [LLVMBuilderRef, LLVMValueRef, LLVMValueRef]
-    # lib.LLVMBuildGEP.argtypes = [LLVMBuilderRef, LLVMValueRef, POINTER(LLVMValueRef), c_uint, c_char_p]
+    def store(self, value, ptr):
+        if not isinstance(ptr.type, PointerType):
+            raise TypeError("Pointer must be pointertype")
+        if ptr.type.element_type != value.type:
+            raise TypeError("Pointer type must by pointer to value type")
+        lib.LLVMBuildStore(self, value, ptr)
+
+    def gep(self, value, indices, name=""):
+        ind_arr = create_c_object_p_array(indices, Value)
+        return V(lib.LLVMBuildGEP(self, value, ind_arr, len(indices), name))
+
     # lib.LLVMBuildInBoundsGEP.argtypes = [LLVMBuilderRef, LLVMValueRef, POINTER(LLVMValueRef), c_uint, c_char_p]
     # lib.LLVMBuildStructGEP.argtypes = [LLVMBuilderRef, LLVMValueRef, c_uint, c_char_p]
     # lib.LLVMBuildGlobalString.argtypes = [LLVMBuilderRef, c_char_p, c_char_p]
@@ -134,8 +146,6 @@ class Builder(LLVMObject):
 
     def phi(self, typ, name=""):
         return V(lib.LLVMBuildPhi(self, typ, name))
-
-    # lib.LLVMBuildCall.argtypes = [LLVMBuilderRef, LLVMValueRef, POINTER(LLVMValueRef), c_uint, c_char_p]
 
     def call(self, callee, args, name=""):
         arglist = create_c_object_p_array(args, Value)

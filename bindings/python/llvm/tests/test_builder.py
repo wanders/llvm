@@ -208,3 +208,20 @@ class TestBuilder(TestBase):
 
         assert self.bb.terminator is r
 
+
+    def test_alloca(self):
+        Ti = self.tfact.int()
+
+        v = self.builder.alloca(Ti)
+
+        self.builder.store(Constant(Ti, 1), v)
+
+        l = self.builder.load(v)
+
+        self.builder.ret(l)
+
+        s = self.m.to_assembly()
+
+        assert "alloca" in s
+        assert "store" in s
+        assert "load" in s
