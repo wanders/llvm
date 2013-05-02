@@ -15,7 +15,7 @@ all::
 	$(Echo) "Building python bindings (which is currently is a no-op)"
 
 
-GEN_HDRS:=Disassembler.h Object.h Core.h BitReader.h Analysis.h ExecutionEngine.h Transforms/PassManagerBuilder.h Transforms/IPO.h Target.h TargetMachine.h
+GEN_HDRS:=Disassembler.h Object.h Core.h BitReader.h BitWriter.h Analysis.h ExecutionEngine.h Transforms/PassManagerBuilder.h Transforms/IPO.h Transforms/Scalar.h Target.h TargetMachine.h
 
 .PHONY: generate-in-src-dir
 generate-in-src-dir:
