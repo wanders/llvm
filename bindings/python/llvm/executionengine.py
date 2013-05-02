@@ -115,6 +115,9 @@ class ExecutionEngine(LLVMObject):
         argarr = create_c_object_p_array(args, GenericValue)
         return GenericValue._from_ptr(lib.LLVMRunFunction(self, function, len(args), argarr))
 
+    def get_pointer_to_function(self, function):
+        return lib.LLVMGetPointerToFunction(self, function)
+
     def create_pyfunc(self, function):
         """Create a python function that executes specified function in the LLVM ir.
 
