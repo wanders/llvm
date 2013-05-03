@@ -1,4 +1,4 @@
-#===- disassembler.py - Python LLVM Bindings -----------------*- python -*--===#
+#===- passmanager.py - Python LLVM Bindings ------------------*- python -*--===#
 #
 #                     The LLVM Compiler Infrastructure
 #
@@ -56,6 +56,72 @@ class ModulePassManager(_PassManagerBase):
         lib.LLVMAddStripDeadPrototypesPass(self)
     def add_strip_symbols_pass(self):
         lib.LLVMAddStripSymbolsPass(self)
+
+
+    def add_aggressive_DCE_pass(self):
+        lib.LLVMAddAggressiveDCEPass(self)
+    def add_CFG_simplification_pass(self):
+        lib.LLVMAddCFGSimplificationPass(self)
+    def add_dead_store_elimination_pass(self):
+        lib.LLVMAddDeadStoreEliminationPass(self)
+    def add_GVN_pass(self):
+        lib.LLVMAddGVNPass(self)
+    def add_induction_variable_simplify_pass(self):
+        lib.LLVMAddIndVarSimplifyPass(self)
+    def add_instruction_combining_pass(self):
+        lib.LLVMAddInstructionCombiningPass(self)
+    def add_jump_threading_pass(self):
+        lib.LLVMAddJumpThreadingPass(self)
+    def add_LICM_pass(self):
+        """Loop Invariant Code Motion"""
+        lib.LLVMAddLICMPass(self)
+    def add_loop_deletion_pass(self):
+        lib.LLVMAddLoopDeletionPass(self)
+    def add_loop_idiom_pass(self):
+        lib.LLVMAddLoopIdiomPass(self)
+    def add_loop_rotate_pass(self):
+        lib.LLVMAddLoopRotatePass(self)
+    def add_loop_unroll_pass(self):
+        lib.LLVMAddLoopUnrollPass(self)
+    def add_loop_unswitch_pass(self):
+        lib.LLVMAddLoopUnswitchPass(self)
+    def add_memcpy_opt_pass(self):
+        lib.LLVMAddMemCpyOptPass(self)
+    def add_promote_memory_to_register_pass(self):
+        lib.LLVMAddPromoteMemoryToRegisterPass(self)
+    def add_reassociate_pass(self):
+        lib.LLVMAddReassociatePass(self)
+    def add_SCCP_pass(self):
+        """Sparse Conditional Constant Propagation"""
+        lib.LLVMAddSCCPPass(self)
+    def add_scalar_repl_aggregates_pass(self, threshold=None):
+        if threshold is None:
+            lib.LLVMAddScalarReplAggregatesPass(self)
+        else:
+            lib.LLVMAddScalarReplAggregatesPassWithThreshold(self, threshold)
+    def add_scalar_repl_aggregates_SSA_pass(self):
+        lib.LLVMAddScalarReplAggregatesPassSSA(self)
+    def add_simplify_lib_calls_pass(self):
+        lib.LLVMAddSimplifyLibCallsPass(self)
+    def add_tail_call_elimination_pass(self):
+        lib.LLVMAddTailCallEliminationPass(self)
+    def add_constant_propagation_pass(self):
+        lib.LLVMAddConstantPropagationPass(self)
+    def add_demote_register_to_memory_pass(self):
+        lib.LLVMAddDemoteRegisterToMemoryPass(self)
+    def add_verifier_pass(self):
+        lib.LLVMAddVerifierPass(self)
+    def add_correlated_value_propagation_pass(self):
+        lib.LLVMAddCorrelatedValuePropagationPass(self)
+    def add_early_CSE_pass(self):
+        lib.LLVMAddEarlyCSEPass(self)
+    def add_lower_expect_intrinsic_pass(self):
+        lib.LLVMAddLowerExpectIntrinsicPass(self)
+    def add_type_based_alias_analysis_pass(self):
+        lib.LLVMAddTypeBasedAliasAnalysisPass(self)
+    def add_basic_alias_analysis_pass(self):
+        lib.LLVMAddBasicAliasAnalysisPass(self)
+
 
 
 class FunctionPassManager(_PassManagerBase):
