@@ -165,7 +165,7 @@ void LLVMAddConstantPropagationPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createConstantPropagationPass());
 }
 
-void LLVMAddDemoteMemoryToRegisterPass(LLVMPassManagerRef PM) {
+void LLVMAddDemoteRegisterToMemoryPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createDemoteRegisterToMemoryPass());
 }
 

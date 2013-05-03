@@ -106,7 +106,7 @@ CAMLprim value llvm_add_memory_to_register_promotion(LLVMPassManagerRef PM) {
 
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 CAMLprim value llvm_add_memory_to_register_demotion(LLVMPassManagerRef PM) {
-  LLVMAddDemoteMemoryToRegisterPass(PM);
+  LLVMAddDemoteRegisterToMemoryPass(PM);
   return Val_unit;
 }
 
