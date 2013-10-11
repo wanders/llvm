@@ -23,8 +23,10 @@ type = LibraryGroup
 name = all-targets
 parent = Libraries
 
+; This is the actual library built in this directory.
+; It just contains the llvm-c bindings LLVMInitializeAllTarget* functions
 [component_1]
 type = Library
-name = AllTargets
+name = AllTargetsBindings
 parent = Libraries
 add_to_library_groups = all-targets

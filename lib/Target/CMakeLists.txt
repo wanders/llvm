@@ -15,4 +15,4 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
   add_subdirectory(${t})
 endforeach()
 
-add_subdirectory("AllTargets")
+add_subdirectory("AllTargetsBindings")

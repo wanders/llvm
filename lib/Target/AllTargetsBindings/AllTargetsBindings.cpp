@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements functions for initialization of different
-// aspects of all configured targets.
+// This file implements the llvm-c functions for initialization of
+// different aspects of all configured targets.
 //
 //===----------------------------------------------------------------------===//
 

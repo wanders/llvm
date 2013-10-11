@@ -1,4 +1,4 @@
-#===- lib/Target/AllTargets/Makefile -----------------------*- Makefile -*-===##
+#===- lib/Target/AllTargetsBindings/Makefile ---------------*- Makefile -*-===##
 #
 #                     The LLVM Compiler Infrastructure
 #
@@ -8,7 +8,7 @@
 ##===----------------------------------------------------------------------===##
 
 LEVEL = ../../..
-LIBRARYNAME = LLVMAllTargets
+LIBRARYNAME = LLVMAllTargetsBindings
 BUILD_ARCHIVE = 1
 
 include $(LEVEL)/Makefile.common
